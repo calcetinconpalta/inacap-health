@@ -1,5 +1,5 @@
 <resources>
     <string name="app_name">INACAP Health</string>
     <!-- Página donde se crea la contraseña nueva (dashboard/restablecer.html publicado). Vacío = la de Supabase. -->
-    <string name="url_restablecer" translatable="false"></string>
+    <string name="url_restablecer" translatable="false">https://inacap-health.pages.dev/restablecer.html</string>
 </resources>
