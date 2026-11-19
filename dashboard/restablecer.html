@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>INACAP Health · Nueva contraseña</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="styles.css">
+  <script src="config.js"></script>
+</head>
+<body>
+  <main class="login">
+    <div class="login-card">
+      <div class="marca"><span class="marca-punto" aria-hidden="true"></span>INACAP Health</div>
+      <h1>Crea una contraseña nueva</h1>
+      <p class="sub" id="sub">Abriste el enlace del correo de recuperación. Escribe tu nueva contraseña.</p>
+      <form id="form" hidden>
+        <label>Contraseña nueva <input type="password" id="p1" minlength="8" required autocomplete="new-password"></label>
+        <label>Repítela <input type="password" id="p2" minlength="8" required autocomplete="new-password"></label>
+        <button class="btn-primario" type="submit" id="btn">Guardar</button>
+      </form>
+      <p class="error" id="msg" role="alert" hidden></p>
+    </div>
+  </main>
+  <script type="module" src="restablecer.js"></script>
+</body>
+</html>

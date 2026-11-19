@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- HU-01 · cifrado en tránsito: solo HTTPS y solo autoridades de certificación del sistema
+     (se ignoran certificados instalados por el usuario, que permitirían interceptar el tráfico). -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

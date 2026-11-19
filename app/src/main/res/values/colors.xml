@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="fondo_claro">#FFF5F7F8</color>
+    <color name="fondo_noche">#FF101315</color>
+</resources>

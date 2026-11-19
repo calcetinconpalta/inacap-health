@@ -1,0 +1,183 @@
+package com.inacap.health.data.remote
+
+import org.json.JSONArray
+import org.json.JSONObject
+import java.net.URLEncoder
+
+/**
+ * Base SQL (Supabase / PostgreSQL) vía su API REST.
+ *
+ * Cada instalación inicia sesión de forma ANÓNIMA (sin correo ni nombre):
+ * Supabase le asigna un UUID aleatorio y las políticas RLS hacen que cada
+ * usuario solo pueda escribir y borrar sus propias filas.
+ */
+class SupabaseCliente(
+    private val url: String,
+    private val anonKey: String,
+    private val sesion: SesionNube
+) {
+    // Sin sesión solo se envía "apikey": las claves nuevas de Supabase (sb_publishable_...)
+    // no son JWT y no se aceptan en Authorization. Con sesión va el token del usuario.
+    private fun headersBase(token: String? = null): Map<String, String> = buildMap {
+        put("apikey", anonKey)
+        if (token != null) put("Authorization", "Bearer $token")
+        else if (anonKey.startsWith("eyJ")) put("Authorization", "Bearer $anonKey")
+    }
+
+    /** Devuelve un access token válido (renueva o crea la sesión anónima si hace falta). */
+    fun asegurarSesion(): String {
+        val actual = sesion.sbAccessToken
+        if (actual != null && System.currentTimeMillis() < sesion.sbExpiraEn - 60_000) return actual
+
+        sesion.sbRefreshToken?.let { refresh ->
+            val r = Http.enviar(
+                "POST", "$url/auth/v1/token?grant_type=refresh_token",
+                headersBase(), JSONObject().put("refresh_token", refresh).toString()
+            )
+            if (r.ok) return guardarSesion(JSONObject(r.cuerpo))
+            if (r.codigo != 400 && r.codigo != 401 && r.codigo != 403) {
+                Http.exigirOk(r, "Supabase refresh", deConfiguracion = true)
+            }
+            // Refresh inválido (usuario borrado o sesión expirada): se crea una nueva.
+        }
+
+        val r = Http.enviar(
+            "POST", "$url/auth/v1/signup", headersBase(), JSONObject().put("data", JSONObject()).toString()
+        )
+        Http.exigirOk(r, "Supabase inicio anónimo", deConfiguracion = true)
+        return guardarSesion(JSONObject(r.cuerpo))
+    }
+
+    internal fun guardarSesion(json: JSONObject): String {
+        val token = json.getString("access_token")
+        sesion.sbAccessToken = token
+        sesion.sbRefreshToken = json.optString("refresh_token").ifBlank { sesion.sbRefreshToken }
+        sesion.sbExpiraEn = System.currentTimeMillis() + json.optLong("expires_in", 3600) * 1000
+        json.optJSONObject("user")?.let { u ->
+            u.optString("id").takeIf { it.isNotBlank() }?.let { sesion.sbUid = it }
+            sesion.cuentaEmail = u.optString("email").takeIf { it.isNotBlank() && !u.optBoolean("is_anonymous", false) }
+        }
+        return token
+    }
+
+    private fun conReintentoToken(accion: (String) -> HttpRespuesta): HttpRespuesta {
+        var r = accion(asegurarSesion())
+        if (r.codigo == 401) {
+            sesion.sbAccessToken = null
+            sesion.sbExpiraEn = 0
+            r = accion(asegurarSesion())
+        }
+        return r
+    }
+
+    /** Inserta o actualiza (por id) una o varias filas. Idempotente: reenviar no duplica. */
+    fun upsert(tabla: String, filas: JSONArray) {
+        val r = conReintentoToken { token ->
+            Http.enviar(
+                "POST", "$url/rest/v1/$tabla?on_conflict=id",
+                headersBase(token) + ("Prefer" to "resolution=merge-duplicates,return=minimal"),
+                filas.toString()
+            )
+        }
+        Http.exigirOk(r, "Supabase upsert $tabla")
+    }
+
+    fun eliminar(tabla: String, id: String) {
+        val idSeguro = URLEncoder.encode(id, "UTF-8")
+        val r = conReintentoToken { token ->
+            Http.enviar(
+                "DELETE", "$url/rest/v1/$tabla?id=eq.$idSeguro",
+                headersBase(token) + ("Prefer" to "return=minimal")
+            )
+        }
+        Http.exigirOk(r, "Supabase delete $tabla")
+    }
+
+    // ------------------------------------------------------------------
+    // Cuenta con correo (opcional). La cuenta anónima se CONVIERTE en una cuenta con
+    // correo: mantiene el mismo id, así que los datos ya enviados siguen siendo suyos.
+    // ------------------------------------------------------------------
+
+    /** Datos del usuario de la sesión actual (email, is_anonymous, new_email…). */
+    fun usuarioActual(): JSONObject {
+        val r = conReintentoToken { token -> Http.enviar("GET", "$url/auth/v1/user", headersBase(token)) }
+        return JSONObject(Http.exigirOk(r, "Supabase usuario").cuerpo)
+    }
+
+    /** PUT /auth/v1/user: agrega correo o contraseña a la cuenta actual. */
+    fun actualizarUsuario(datos: JSONObject): JSONObject {
+        val r = conReintentoToken { token -> Http.enviar("PUT", "$url/auth/v1/user", headersBase(token), datos.toString()) }
+        return JSONObject(Http.exigirOk(r, "Supabase actualizar usuario").cuerpo)
+    }
+
+    /** Inicia sesión con correo y contraseña (reemplaza la sesión anónima). */
+    fun iniciarSesion(email: String, password: String) {
+        val r = Http.enviar(
+            "POST", "$url/auth/v1/token?grant_type=password", headersBase(),
+            JSONObject().put("email", email).put("password", password).toString()
+        )
+        Http.exigirOk(r, "Supabase iniciar sesión")
+        guardarSesion(JSONObject(r.cuerpo))
+    }
+
+    /** Crea una cuenta nueva con correo (personal del equipo). */
+    fun registrarConCorreo(email: String, password: String) {
+        val r = Http.enviar("POST", "$url/auth/v1/signup", headersBase(), JSONObject().put("email", email).put("password", password).toString())
+        Http.exigirOk(r, "Supabase registro")
+    }
+
+    /** Envía el correo para crear una contraseña nueva. */
+    fun recuperarContrasena(email: String, redirigirA: String?) {
+        val destino = redirigirA?.takeIf { it.isNotBlank() }?.let { "?redirect_to=" + URLEncoder.encode(it, "UTF-8") } ?: ""
+        val r = Http.enviar("POST", "$url/auth/v1/recover$destino", headersBase(), JSONObject().put("email", email).toString())
+        Http.exigirOk(r, "Supabase recuperar contraseña")
+    }
+
+    /** Cierra la sesión en el servidor (el token deja de servir). */
+    fun cerrarSesion() {
+        val token = sesion.sbAccessToken ?: return
+        runCatching { Http.enviar("POST", "$url/auth/v1/logout", headersBase(token)) }
+    }
+
+    /** Elimina los datos de una sesión anterior usando su token (al cambiar de cuenta anónima a correo). */
+    fun eliminarDatosConToken(token: String) {
+        runCatching {
+            Http.enviar("POST", "$url/rest/v1/rpc/eliminar_mis_datos", headersBase(token), JSONObject().put("motivo", "eliminacion").toString())
+        }
+    }
+
+    /** Consulta filas visibles para este usuario (RLS). [consulta] es la query de PostgREST. */
+    fun seleccionar(tabla: String, consulta: String): JSONArray {
+        val r = conReintentoToken { token -> Http.enviar("GET", "$url/rest/v1/$tabla?$consulta", headersBase(token)) }
+        return JSONArray(Http.exigirOk(r, "Supabase select $tabla").cuerpo.ifBlank { "[]" })
+    }
+
+    /** Inserta una fila y devuelve la fila creada. */
+    fun insertar(tabla: String, fila: JSONObject): JSONObject {
+        val r = conReintentoToken { token ->
+            Http.enviar("POST", "$url/rest/v1/$tabla", headersBase(token) + ("Prefer" to "return=representation"), fila.toString())
+        }
+        return JSONArray(Http.exigirOk(r, "Supabase insert $tabla").cuerpo).getJSONObject(0)
+    }
+
+    /** Llama a una función del servidor. */
+    fun rpc(funcion: String, argumentos: JSONObject = JSONObject()): String {
+        val r = conReintentoToken { token -> Http.enviar("POST", "$url/rest/v1/rpc/$funcion", headersBase(token), argumentos.toString()) }
+        return Http.exigirOk(r, "Supabase rpc $funcion").cuerpo
+    }
+
+    /**
+     * Borra todos los datos del usuario en la base SQL (y su cuenta anónima).
+     * Lo hace la función eliminar_mis_datos() del servidor.
+     */
+    fun eliminarMisDatos(motivo: String) {
+        if (sesion.sbRefreshToken == null && sesion.sbAccessToken == null) return // nunca envió nada
+        val r = conReintentoToken { token ->
+            Http.enviar(
+                "POST", "$url/rest/v1/rpc/eliminar_mis_datos",
+                headersBase(token), JSONObject().put("motivo", motivo).toString()
+            )
+        }
+        Http.exigirOk(r, "Supabase eliminar_mis_datos")
+    }
+}

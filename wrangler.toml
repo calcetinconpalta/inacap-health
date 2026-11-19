@@ -1,0 +1,5 @@
+# Cloudflare Pages: publica la carpeta dashboard/ como sitio estático.
+# Despliegue manual:  node scripts/generar-config.mjs && npx wrangler pages deploy
+name = "inacap-health"
+pages_build_output_dir = "dashboard"
+compatibility_date = "2026-11-01"

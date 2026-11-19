@@ -1,0 +1,19 @@
+# Copia este archivo como local.properties (en la raíz del proyecto) y completa los valores.
+# local.properties NO se sube a git.
+#
+# Android Studio agrega sdk.dir automáticamente.
+#
+# --- Base SQL: Supabase (PostgreSQL) ---
+# Supabase > Project Settings > API
+SUPABASE_URL=https://TU-PROYECTO.supabase.co
+SUPABASE_ANON_KEY=tu-anon-key
+#
+# --- Base NoSQL: Firebase Firestore ---
+# Firebase console > Configuración del proyecto > General
+FIREBASE_API_KEY=tu-web-api-key
+FIREBASE_PROJECT_ID=tu-project-id
+#
+# --- Derivaciones cifradas de extremo a extremo ---
+# Clave PÚBLICA de Bienestar Estudiantil (la genera el dashboard en "Derivaciones" >
+# "Generar par de claves"). La privada NUNCA va aquí.
+BIENESTAR_CLAVE_PUBLICA=MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEA...

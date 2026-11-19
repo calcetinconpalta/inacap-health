@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>INACAP Health · Panel del equipo</title>
+  <meta name="robots" content="noindex">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="config.js"></script>
+</head>
+<body>
+  <!-- ============ Acceso ============ -->
+  <main id="vista-login" class="login">
+    <div class="login-card">
+      <div class="marca"><span class="marca-punto" aria-hidden="true"></span>INACAP Health</div>
+      <h1>Panel del equipo</h1>
+      <p class="sub">Estadísticas anónimas, solicitudes y chats con estudiantes. Solo para el equipo autorizado.</p>
+      <form id="form-login" autocomplete="on">
+        <label>Correo
+          <input type="email" id="email" required autocomplete="username">
+        </label>
+        <label>Contraseña
+          <input type="password" id="password" required autocomplete="current-password">
+        </label>
+        <button type="submit" class="btn-primario" id="btn-entrar">Entrar</button>
+      </form>
+      <p class="error" id="login-error" role="alert" hidden></p>
+      <div class="separador"><span>o</span></div>
+      <button type="button" class="btn-secundario" id="btn-demo">Ver con datos de demostración</button>
+      <p class="nota" id="nota-config"></p>
+    </div>
+  </main>
+
+  <!-- ============ Panel ============ -->
+  <div id="vista-panel" hidden>
+    <header class="barra">
+      <div class="barra-izq">
+        <div class="marca"><span class="marca-punto" aria-hidden="true"></span>INACAP Health</div>
+        <span class="barra-titulo">Panel del equipo</span>
+        <span class="chip" id="chip-modo"></span>
+      </div>
+      <nav class="pestanas" id="pestanas" aria-label="Secciones"></nav>
+      <div class="barra-der">
+        <select id="demo-rol" class="btn-icono" hidden aria-label="Ver como">
+          <option value="admin">Ver como: Administrador</option>
+          <option value="tutor">Ver como: Tutor par</option>
+          <option value="docente">Ver como: Docente</option>
+          <option value="bienestar">Ver como: Profesional de salud</option>
+        </select>
+        <div class="segmentado" role="group" aria-label="Período" id="periodo">
+          <button type="button" data-dias="7">7 días</button>
+          <button type="button" data-dias="30" class="activo">30 días</button>
+          <button type="button" data-dias="90">90 días</button>
+        </div>
+        <button type="button" class="btn-icono" id="btn-actualizar" title="Actualizar">Actualizar</button>
+        <button type="button" class="btn-icono btn-tema">Modo noche</button>
+        <button type="button" class="btn-icono" id="btn-salir">Salir</button>
+      </div>
+    </header>
+
+    <main class="contenido">
+      <p class="estado" id="estado" role="status"></p>
+      <div id="vista-orientacion" hidden></div>
+      <div id="vista-derivaciones" hidden></div>
+      <div id="vista-equipo" class="vista-admin" hidden></div>
+      <div id="vista-seguridad" class="vista-admin" hidden></div>
+      <div id="vista-estadisticas">
+
+      <!-- KPIs -->
+      <section class="kpis" id="kpis" aria-label="Indicadores principales"></section>
+
+      <!-- Base SQL -->
+      <h2 class="seccion"><span class="etiqueta-bd">SQL · Supabase</span> Salud y bienestar</h2>
+      <div class="grilla">
+        <article class="tarjeta ancho-2">
+          <header><h3>Actividad diaria</h3><p>Registros enviados por día (hora de Chile)</p></header>
+          <div class="dos-graficos">
+            <div><p class="mini-titulo">Vasos de agua registrados</p><div class="grafico"><canvas id="g-serie-agua"></canvas></div></div>
+            <div><p class="mini-titulo">IMC, tests SCOFF y derivaciones</p><div class="grafico"><canvas id="g-serie"></canvas></div></div>
+          </div>
+          <details><summary>Ver tabla</summary><div class="tabla" id="t-serie"></div></details>
+        </article>
+        <article class="tarjeta">
+          <header><h3>IMC por rango de referencia</h3><p id="p-imc">Último IMC de cada usuario en el período</p></header>
+          <div class="grafico"><canvas id="g-imc"></canvas></div>
+          <details><summary>Ver tabla</summary><div class="tabla" id="t-imc"></div></details>
+        </article>
+        <article class="tarjeta">
+          <header><h3>Puntaje SCOFF</h3><p id="p-scoff">Tests del período · 2 o más sugiere conversar con un profesional</p></header>
+          <div class="grafico"><canvas id="g-scoff"></canvas></div>
+          <details><summary>Ver tabla</summary><div class="tabla" id="t-scoff"></div></details>
+        </article>
+        <article class="tarjeta">
+          <header><h3>Rango de edad</h3><p>Usuarios que comparten datos</p></header>
+          <div class="grafico"><canvas id="g-edad"></canvas></div>
+          <details><summary>Ver tabla</summary><div class="tabla" id="t-edad"></div></details>
+        </article>
+        <article class="tarjeta">
+          <header><h3>Derivaciones por canal</h3><p>Solicitudes de apoyo profesional</p></header>
+          <div class="grafico"><canvas id="g-deriv"></canvas></div>
+          <details><summary>Ver tabla</summary><div class="tabla" id="t-deriv"></div></details>
+        </article>
+      </div>
+
+      <!-- Base NoSQL -->
+      <h2 class="seccion"><span class="etiqueta-bd">NoSQL · Firestore</span> Uso de la app</h2>
+      <div class="grilla">
+        <article class="tarjeta ancho-2">
+          <header><h3>Eventos y usuarios activos por día</h3><p id="p-eventos">Eventos de uso registrados</p></header>
+          <div class="dos-graficos">
+            <div><p class="mini-titulo">Eventos</p><div class="grafico"><canvas id="g-eventos"></canvas></div></div>
+            <div><p class="mini-titulo">Instalaciones activas</p><div class="grafico"><canvas id="g-dau"></canvas></div></div>
+          </div>
+          <details><summary>Ver tabla</summary><div class="tabla" id="t-eventos"></div></details>
+        </article>
+        <article class="tarjeta">
+          <header><h3>Pantallas más visitadas</h3><p>Vistas en el período</p></header>
+          <div class="grafico alto"><canvas id="g-pantallas"></canvas></div>
+          <details><summary>Ver tabla</summary><div class="tabla" id="t-pantallas"></div></details>
+        </article>
+        <article class="tarjeta">
+          <header><h3>Acciones registradas</h3><p>Tipos de evento</p></header>
+          <div class="tabla" id="t-tipos"></div>
+        </article>
+        <article class="tarjeta ancho-2">
+          <header><h3>Errores de la app</h3><p>Cierres inesperados reportados (sin datos personales)</p></header>
+          <div class="tabla" id="t-errores"></div>
+        </article>
+      </div>
+
+      <!-- Gobernanza -->
+      <h2 class="seccion"><span class="etiqueta-bd">Privacidad</span> ¿Qué pasa con los datos?</h2>
+      <div class="grilla">
+        <article class="tarjeta">
+          <header><h3>Consentimientos y derechos</h3><p>Decisiones de los usuarios sobre sus datos</p></header>
+          <div class="tabla" id="t-privacidad"></div>
+        </article>
+        <article class="tarjeta">
+          <header><h3>Flujo de los datos</h3><p>De dónde sale cada dato y a dónde llega</p></header>
+          <ol class="flujo">
+            <li><strong>Teléfono (Room / SQLite).</strong> Todo se guarda primero aquí. Sin consentimiento, nada sale del teléfono.</li>
+            <li><strong>Bandeja de salida.</strong> Con consentimiento, una copia anonimizada espera en <code>sync_pendiente</code> hasta que hay internet (funciona sin conexión).</li>
+            <li><strong>SQL · Supabase.</strong> Tablas relacionadas: usuarios, consentimientos, IMC/agua, SCOFF, derivaciones. Cada instalación solo puede escribir lo suyo (RLS).</li>
+            <li><strong>NoSQL · Firestore.</strong> Eventos de uso de alto volumen y esquema flexible.</li>
+            <li><strong>Este panel.</strong> Solo cifras agregadas, solo para administradores.</li>
+            <li><strong>Borrado.</strong> Al revocar o eliminar, la app borra su copia en ambas bases. Retención máxima: 24 meses.</li>
+          </ol>
+        </article>
+        <article class="tarjeta ancho-2">
+          <header><h3>Inventario de datos</h3><p>Qué se guarda, dónde y por cuánto tiempo</p></header>
+          <div class="tabla" id="t-inventario"></div>
+        </article>
+      </div>
+      </div>
+      <footer class="pie">INACAP Health · proyecto académico · los datos se muestran agregados y sin identificar personas.</footer>
+    </main>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+rules_version = '2';
+
+// =====================================================================
+// INACAP Health · Base NoSQL (Firebase Firestore)
+// Colección "eventos": uso de la app (pantallas, funciones, errores).
+//   - La app (sesión anónima) solo puede CREAR y BORRAR sus propios eventos.
+//   - Nadie puede editar un evento.
+//   - Solo los administradores (colección "administradores") pueden leer todo.
+// =====================================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function autenticado() {
+      return request.auth != null;
+    }
+
+    function esAdmin() {
+      return autenticado()
+        && exists(/databases/$(database)/documents/administradores/$(request.auth.uid));
+    }
+
+    function eventoValido(d) {
+      return d.keys().hasOnly(['uid', 'tipo', 'ts', 'props', 'version_app', 'android_sdk'])
+        && d.keys().hasAll(['uid', 'tipo', 'ts'])
+        && d.uid == request.auth.uid
+        && d.tipo is string && d.tipo.size() > 0 && d.tipo.size() <= 40
+        && d.ts is timestamp
+        && d.ts < request.time + duration.value(10, 'm')
+        && (!('props' in d) || (d.props is map && d.props.size() <= 10))
+        && (!('version_app' in d) || (d.version_app is string && d.version_app.size() <= 20))
+        && (!('android_sdk' in d) || d.android_sdk is int);
+    }
+
+    match /eventos/{eventoId} {
+      allow create: if autenticado() && eventoValido(request.resource.data);
+      allow read:   if esAdmin() || (autenticado() && resource.data.uid == request.auth.uid);
+      allow delete: if autenticado() && resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+
+    // Se agregan a mano desde la consola (id del documento = UID del admin).
+    match /administradores/{uid} {
+      allow read:  if autenticado() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
