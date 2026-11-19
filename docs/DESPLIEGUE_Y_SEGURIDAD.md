@@ -38,9 +38,9 @@ node scripts/generar-config.mjs
 npx wrangler login
 ```
 ```bash
-npx wrangler pages deploy
+npx wrangler pages deploy dashboard --project-name inacap-health
 ```
-(`wrangler.toml` ya indica que se publica la carpeta `dashboard/`.)
+(No hay `wrangler.toml` a propósito: si existe, Cloudflare Pages ignora las variables cargadas en su panel y el panel quedaría en modo demostración.)
 
 ### Después de publicar
 - **Supabase → Authentication → URL Configuration:** *Site URL* = la dirección del panel; *Redirect URLs* = `https://TU-PANEL.pages.dev/restablecer.html`.
