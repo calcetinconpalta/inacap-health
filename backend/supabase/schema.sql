@@ -314,7 +314,11 @@ returns boolean
 language sql stable security definer
 set search_path = public
 as $$
-    select coalesce(public.rol_actual() = any (roles), false);
+    -- Quien está en "administradores" además de tener otro rol (p. ej. bienestar) también cuenta como admin.
+    select coalesce(public.rol_actual() = any (roles), false)
+        or ('admin' = any (roles)
+            and exists (select 1 from public.personal p where p.user_id = auth.uid() and p.activo)
+            and exists (select 1 from public.administradores a where a.user_id = auth.uid()));
 $$;
 
 create or replace function public.es_admin()

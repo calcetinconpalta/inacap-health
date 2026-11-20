@@ -102,6 +102,12 @@ async function iniciarSesion(email, password) {
       if (e2) throw e2;
       if (!rol) throw new Error("tu cuenta no tiene un rol asignado en la tabla personal");
       estado.rol = rol;
+      // Un profesional de salud que también es administrador ve además las pestañas de administración.
+      estado.tambienAdmin = false;
+      if (rol !== "admin") {
+        const { data: adm } = await estado.sb.rpc("es_admin");
+        estado.tambienAdmin = adm === true;
+      }
     } catch (e) {
       estado.sb = null;
       errores.push(`Base SQL: ${e.message}`);
@@ -462,9 +468,11 @@ function mostrarPanel(modo) {
   $("#vista-login").hidden = true;
   $("#vista-panel").hidden = false;
   $("#demo-rol").hidden = modo !== "demo";
-  const partes = modo === "demo" ? ["Demostración", NOMBRES_ROL[estado.rol]] : [NOMBRES_ROL[estado.rol]];
+  const doble = modo !== "demo" && estado.tambienAdmin && estado.rol !== "admin";
+  const nombreRol = doble ? `${NOMBRES_ROL[estado.rol]} · ${NOMBRES_ROL.admin}` : NOMBRES_ROL[estado.rol];
+  const partes = modo === "demo" ? ["Demostración", nombreRol] : [nombreRol];
   $("#chip-modo").textContent = partes.join(" · ");
-  const tabs = PESTANAS[estado.rol] || [];
+  const tabs = doble ? [...(PESTANAS[estado.rol] || []), ...PESTANAS.admin.filter(([id]) => id !== "derivaciones")] : (PESTANAS[estado.rol] || []);
   $("#pestanas").replaceChildren(...tabs.map(([id, nombre]) => {
     const b = document.createElement("button");
     b.type = "button"; b.textContent = nombre; b.dataset.id = id;
@@ -554,6 +562,7 @@ async function salir(mensaje) {
   estado.detenerPersonal?.();
   estado.detenerPersonal = null;
   estado.rol = null;
+  estado.tambienAdmin = false;
   Object.values(estado.graficos).forEach((g) => g.destroy());
   estado.graficos = {};
   ["#vista-orientacion", "#vista-derivaciones", "#vista-equipo", "#vista-seguridad"].forEach((v) => $(v).replaceChildren());
