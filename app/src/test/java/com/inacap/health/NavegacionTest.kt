@@ -102,6 +102,16 @@ class NavegacionTest {
         compose.onNodeWithText("He leído", substring = true).performScrollTo().performClick()
         compose.onNodeWithText("Tengo 18 años", substring = true).performScrollTo().performClick()
         compose.onNodeWithText("Comenzar").performScrollTo().performClick()
+        // Con la nube configurada (claves en .env / local.properties) la app ofrece crear una cuenta.
+        // Sin claves esa pantalla no aparece: la prueba sirve en los dos casos.
+        repeat(20) {
+            if (compose.onAllNodesWithText("Seguir sin cuenta").fetchSemanticsNodes().isNotEmpty()) return@repeat
+            if (compose.onAllNodes(hasText("Salud") and isSelectable()).fetchSemanticsNodes().isNotEmpty()) return@repeat
+            Thread.sleep(100); compose.waitForIdle()
+        }
+        if (compose.onAllNodesWithText("Seguir sin cuenta").fetchSemanticsNodes().isNotEmpty()) {
+            compose.onNodeWithText("Seguir sin cuenta").performScrollTo().performClick()
+        }
         repeat(50) { if (compose.onAllNodes(hasText("Salud") and isSelectable()).fetchSemanticsNodes().isNotEmpty()) return@repeat; Thread.sleep(100); compose.waitForIdle() }
         tab("Salud"); compose.onNodeWithText("Calculadoras IMC e hidratación").assertIsDisplayed()
         tab("Inicio"); compose.onNodeWithText("Hola").assertIsDisplayed()
