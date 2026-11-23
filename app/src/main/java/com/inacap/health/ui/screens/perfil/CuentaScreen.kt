@@ -46,7 +46,7 @@ fun CuentaScreen(onBack: () -> Unit, onAcceso: () -> Unit = {}, onIniciarSesion:
     val scope = rememberCoroutineScope()
     var estado by remember { mutableStateOf<String?>(null) }
     var ocupado by remember { mutableStateOf(false) }
-    var diagnostico by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+    var diagnostico by remember { mutableStateOf<List<com.inacap.health.data.sync.SyncManager.Diagnostico>>(emptyList()) }
     val fecha = { ms: Long -> if (ms <= 0) "—" else SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.forLanguageTag("es-CL")).format(Date(ms)) }
 
     Scaffold(topBar = { BarraSuperior("Cuenta", onBack) }) { padding ->
@@ -123,7 +123,10 @@ fun CuentaScreen(onBack: () -> Unit, onAcceso: () -> Unit = {}, onIniciarSesion:
                     ) { Text("Probar conexión", color = MaterialTheme.colorScheme.onSurface) }
                 }
                 estado?.let { TextoSecundario(it) }
-                diagnostico.forEach { (que, resultado) -> FilaValor(que, resultado) }
+                diagnostico.forEach { d ->
+                    FilaValor(d.etiqueta, if (d.errorTecnico == null) d.resultado else "Con problemas")
+                    d.errorTecnico?.let { com.inacap.health.ui.components.DetalleError(resumen = d.resultado, error = it) }
+                }
             }
         }
     }

@@ -20,6 +20,7 @@ import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import com.inacap.health.data.remote.ExplicacionError
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -261,11 +262,16 @@ class SyncManagerTest {
         nube.reglasFirestoreSinPublicar = true
         repeat(5) { runCatching { sync.procesar() } }           // muchos intentos fallidos…
         assertEquals("…y no se descarta nada", 2, pendientes())
-        assertTrue(sync.sincronizarAhora().contains("schema.sql"))
+        val aviso = sync.sincronizarAhora()
+        listOf("Supabase", "Firebase", "Firestore", "SQL", "schema").forEach { assertFalse("«$aviso» no debe decir $it", aviso.contains(it)) }
+        // Qué configurar sigue disponible, pero solo dentro de «Ver detalle del error».
+        assertTrue(ExplicacionError.explicar(sync.sesion.ultimoErrorSync).contains("schema.sql"))
 
-        val diag = sync.diagnosticar().toMap()
-        assertTrue(diag["Base SQL (Supabase)"]!!.contains("schema.sql"))
-        assertTrue(diag["Base NoSQL (Firestore)"]!!.contains("reglas"))
+        val diag = sync.diagnosticar().associateBy { it.etiqueta }
+        assertEquals(listOf("Compartir datos", "Conexión", "Registros", "Uso de la app", "Envíos pendientes"), sync.diagnosticar().map { it.etiqueta })
+        diag.values.forEach { d -> listOf("Supabase", "Firestore", "SQL", "NoSQL", "local.properties").forEach { assertFalse(d.resultado, d.resultado.contains(it)) } }
+        assertTrue(ExplicacionError.explicar(diag["Registros"]!!.errorTecnico).contains("schema.sql"))
+        assertTrue(ExplicacionError.explicar(diag["Uso de la app"]!!.errorTecnico).contains("reglas"))
 
         // Al corregir la configuración, todo se envía
         nube.faltaEsquema = false
@@ -280,7 +286,8 @@ class SyncManagerTest {
         sync.sesion.compartirNube = true
         sync.encolarRegistro(imc)
         val r = sync.sincronizarAhora()
-        assertTrue(r, r.contains("Allow anonymous sign-ins"))
+        assertFalse(r, r.contains("Supabase"))
+        assertTrue(ExplicacionError.explicar(sync.sesion.ultimoErrorSync).contains("Allow anonymous sign-ins"))
         assertEquals(1, pendientes())
     }
 

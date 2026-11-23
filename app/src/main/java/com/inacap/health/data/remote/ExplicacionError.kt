@@ -22,14 +22,45 @@ object ExplicacionError {
         }
     }
 
-    fun paraPersona(mensaje: String?, codigo: Int? = null): String {
-        fallaDeRed(mensaje)?.let { return "$it Tus datos quedan guardados y se enviarán después." }
+    /** La misma causa de [fallaDeRed], en palabras simples (sin "servidor" ni siglas). */
+    fun redSimple(mensaje: String?): String? {
+        val m = mensaje ?: return null
+        if (!m.startsWith("Sin respuesta") && !m.startsWith("Sin conexión")) return null
         return when {
-            codigo == -1 -> "No hubo respuesta del servidor. Tus datos quedan guardados y se enviarán después."
+            "UnknownHostException" in m -> "El teléfono no tiene internet o la red no encuentra la dirección."
+            "SocketTimeoutException" in m || "timeout" in m.lowercase() -> "La conexión tardó demasiado en responder. Puede estar lenta o débil."
+            "SSLHandshakeException" in m || "CertPathValidatorException" in m || "SSLPeerUnverified" in m || "SSLException" in m ->
+                "La conexión segura fue rechazada. Revisa la fecha y hora del teléfono, o si la red Wi-Fi pide iniciar sesión."
+            "ConnectException" in m || "ECONNREFUSED" in m || "NoRouteToHost" in m -> "No se pudo conectar: la red lo bloquea o el servicio no está disponible ahora."
+            "ProtocolException" in m -> "Llegó una respuesta inesperada."
+            "SocketException" in m || "EOFException" in m || "reset" in m.lowercase() -> "La conexión se cortó a la mitad. Intenta de nuevo."
+            else -> "No hubo respuesta."
+        }
+    }
+
+    /** Mensaje simple para acciones en línea (modo equipo, chats): sin nombres de servicios. */
+    fun simple(mensaje: String?, codigo: Int? = null): String {
+        redSimple(mensaje)?.let { return it }
+        val m = (mensaje ?: "").lowercase()
+        return when {
+            codigo == -1 -> "No hubo respuesta. Revisa tu conexión e intenta de nuevo."
+            codigo == 429 -> "Hiciste muchas acciones seguidas. Espera unos minutos y vuelve a intentarlo."
+            codigo == 401 -> "Tu sesión venció. Vuelve a iniciar sesión."
+            codigo == 403 || "42501" in m || "row-level security" in m || "permission denied" in m ->
+                "No tienes permiso para esta acción con tu rol actual."
+            codigo != null && codigo >= 500 -> "Hay un problema en este momento. Intenta de nuevo en unos minutos."
+            else -> "Algo no funcionó. Intenta de nuevo."
+        }
+    }
+
+    fun paraPersona(mensaje: String?, codigo: Int? = null): String {
+        redSimple(mensaje)?.let { return "$it Tus datos quedan guardados y se enviarán después." }
+        return when {
+            codigo == -1 -> "No hubo respuesta. Tus datos quedan guardados y se enviarán después."
             codigo == 429 -> "Hiciste muchas acciones seguidas. Espera unos minutos y vuelve a intentarlo."
             codigo == 401 -> "Tu sesión venció. Se renovará sola al volver a sincronizar."
-            codigo == 403 -> "El servidor rechazó el envío (permisos). Tus datos quedan guardados."
-            codigo != null && codigo >= 500 -> "El servidor tiene un problema en este momento. Se volverá a intentar automáticamente."
+            codigo == 403 -> "El envío fue rechazado por permisos. Tus datos quedan guardados."
+            codigo != null && codigo >= 500 -> "Hay un problema en este momento. Se volverá a intentar automáticamente."
             else -> "No pudimos enviar tus datos todavía. Se volverá a intentar automáticamente."
         }
     }

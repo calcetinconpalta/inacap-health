@@ -235,30 +235,46 @@ class SyncManager(
         } catch (e: Exception) {
             // Se guarda el error real (también los que no vienen del servidor) para «Ver detalle del error».
             if (e !is ErrorNube) sesion.ultimoErrorSync = "${e.javaClass.simpleName}: ${e.message ?: "sin mensaje"}"
-            val codigo = (e as? ErrorNube)?.codigo
-            if (BuildConfig.DEBUG) ExplicacionError.explicar(e.message, codigo) else ExplicacionError.paraPersona(e.message, codigo)
+            // Siempre en lenguaje simple (también en las compilaciones de prueba); el nombre del
+            // servicio y qué configurar quedan solo en «Ver detalle del error».
+            ExplicacionError.paraPersona(e.message, (e as? ErrorNube)?.codigo)
         }
     }
 
-    /** Prueba cada base por separado y explica qué falta configurar. */
-    suspend fun diagnosticar(): List<Pair<String, String>> = withContext(Dispatchers.IO) {
-        val r = mutableListOf<Pair<String, String>>()
-        r += "Compartir datos" to if (sesion.compartirNube) "Activado" else "Desactivado: no se envían estadísticas"
-        r += "Base SQL (Supabase)" to if (!config.sqlConfigurado) "Sin configurar en local.properties" else try {
+    /**
+     * Una fila de «Probar conexión». [resultado] va en lenguaje simple; [errorTecnico] es el error
+     * real, que solo se ve dentro de «Ver detalle del error».
+     */
+    data class Diagnostico(val etiqueta: String, val resultado: String, val errorTecnico: String? = null)
+
+    /** Prueba cada parte por separado. Etiquetas sin nombres de servicios, en todas las versiones. */
+    suspend fun diagnosticar(): List<Diagnostico> = withContext(Dispatchers.IO) {
+        fun prueba(etiqueta: String, configurado: Boolean, accion: () -> Unit): Diagnostico =
+            if (!configurado) Diagnostico(etiqueta, "No disponible en esta versión")
+            else try {
+                accion(); Diagnostico(etiqueta, "Funciona ✓")
+            } catch (e: Exception) {
+                Diagnostico(etiqueta, ExplicacionError.paraPersona(e.message, (e as? ErrorNube)?.codigo), e.message ?: e.javaClass.simpleName)
+            }
+
+        val registros = prueba("Registros", config.sqlConfigurado) {
             supabase.asegurarSesion()
             supabase.seleccionar(TABLA_USUARIOS, "select=id&limit=1")
-            "Conectada ✓"
-        } catch (e: Exception) { ExplicacionError.explicar(e.message, (e as? ErrorNube)?.codigo) }
-        r += "Base NoSQL (Firestore)" to if (!config.nosqlConfigurado) "Sin configurar en local.properties" else try {
+        }
+        val uso = prueba("Uso de la app", config.nosqlConfigurado) {
             firestore.asegurarSesion()
             firestore.crearDocumento(
                 COLECCION_EVENTOS, UUID.randomUUID().toString(),
                 Anonimizacion.evento("diagnostico", emptyMap(), System.currentTimeMillis(), BuildConfig.VERSION_NAME, Build.VERSION.SDK_INT)
             )
-            "Conectada ✓"
-        } catch (e: Exception) { ExplicacionError.explicar(e.message, (e as? ErrorNube)?.codigo) }
-        r += "Envíos pendientes" to outbox.contar().first().toString()
-        r
+        }
+        val red = listOf(registros, uso).firstNotNullOfOrNull { d -> d.errorTecnico?.let { ExplicacionError.redSimple(it)?.let { m -> d.copy(etiqueta = "Conexión", resultado = m) } } }
+        listOf(
+            Diagnostico("Compartir datos", if (sesion.compartirNube) "Activado" else "Desactivado: no se envían estadísticas"),
+            red ?: Diagnostico("Conexión", if (registros.errorTecnico == null || uso.errorTecnico == null) "Con internet ✓" else "Revisa el detalle"),
+            registros, uso,
+            Diagnostico("Envíos pendientes", outbox.contar().first().toString())
+        )
     }
 
     /** Envía todo lo pendiente. Lanza [ErrorNube] transitorio para que el Worker reintente. */

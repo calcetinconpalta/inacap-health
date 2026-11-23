@@ -136,7 +136,7 @@ class CuentaTest {
         assertFalse(ReglasCuenta.contrasenaValida("corta1"))
         assertFalse(ReglasCuenta.contrasenaValida("solamenteletras"))
         assertTrue(ReglasCuenta.contrasenaValida("clave1234"))
-        assertEquals("No hubo respuesta del servidor. Revisa tu internet e intenta de nuevo.", ReglasCuenta.mensaje(ErrorNube(-1, "x")))
+        assertEquals("No hubo respuesta. Revisa tu internet e intenta de nuevo.", ReglasCuenta.mensaje(ErrorNube(-1, "x")))
         assertTrue(ReglasCuenta.mensaje(ErrorNube(-1, "Sin respuesta (POST /auth/v1/token): SocketTimeoutException: timeout")).contains("tardó demasiado"))
         assertTrue(ReglasCuenta.mensaje(ErrorNube(500, "boom")).contains("500"))
         // 403: mensaje claro (no el técnico "error 403"), por inyección rechazada en el servidor/WAF.

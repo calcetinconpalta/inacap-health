@@ -31,7 +31,11 @@ import com.inacap.health.data.remote.ExplicacionError
 @Composable
 fun DetalleError(resumen: String, error: String?) {
     var abierto by remember { mutableStateOf(false) }
-    val detalle = ExplicacionError.detalle(error, completo = BuildConfig.DEBUG)
+    // En las compilaciones de prueba, el detalle parte con qué configurar (puede nombrar servicios:
+    // solo se ve al abrir «Ver detalle del error»).
+    val detalle = ExplicacionError.detalle(error, completo = BuildConfig.DEBUG)?.let {
+        if (BuildConfig.DEBUG) ExplicacionError.explicar(error) + "\n\n" + it else it
+    }
     val portapapeles = LocalClipboardManager.current
     Column(Modifier.fillMaxWidth()) {
         TextoSecundario(resumen)

@@ -3,6 +3,7 @@ package com.inacap.health.ui.screens.equipo
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -105,7 +106,7 @@ fun EquipoApp(repo: EquipoRepositorio, onSalir: () -> Unit) {
     var abierta by remember { mutableStateOf<String?>(null) }
     var convs by remember { mutableStateOf<List<ConversacionEquipo>>(emptyList()) }
     var ders by remember { mutableStateOf<List<DerivacionEquipo>>(emptyList()) }
-    var error by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf<Exception?>(null) }
     val scope = rememberCoroutineScope()
 
     val pestanas = PestanaEquipo.de(rol)
@@ -117,7 +118,7 @@ fun EquipoApp(repo: EquipoRepositorio, onSalir: () -> Unit) {
             if (rol == RolEquipo.PROFESIONAL) ders = repo.derivaciones()
             error = null
         } catch (e: Exception) {
-            error = ExplicacionError.explicar(e.message, (e as? com.inacap.health.data.remote.ErrorNube)?.codigo)
+            error = e
         }
     }
     LaunchedEffect(pestana, abierta) { while (true) { recargar(); delay(10_000) } }
@@ -174,7 +175,7 @@ fun EquipoApp(repo: EquipoRepositorio, onSalir: () -> Unit) {
         }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            error?.let { Text(it, color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, modifier = Modifier.padding(16.dp)) }
+            error?.let { Box(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) { ErrorSimple(it) } }
             when (pestanas.getOrElse(pestana) { PestanaEquipo.CUENTA }) {
                 PestanaEquipo.SOLICITUDES -> Solicitudes(repo, rol, convs, ders, onAbrir = { abierta = it }, onCambio = { scope.launch { recargar() } })
                 PestanaEquipo.CHATS -> ListaChats(misChats, rol, onAbrir = { abierta = it })
@@ -304,7 +305,7 @@ private fun ChatEquipo(repo: EquipoRepositorio, rol: RolEquipo, id: String, conv
     var bitacora by remember { mutableStateOf<List<Supervision>>(emptyList()) }
     var texto by remember { mutableStateOf("") }
     var nota by remember { mutableStateOf<String?>(null) }
-    var aviso by remember { mutableStateOf<String?>(null) }
+    var aviso by remember { mutableStateOf<Exception?>(null) }
     val lista = rememberLazyListState()
     val estado = conv?.estado ?: "abierta"
     val propioRol = when (rol) { RolEquipo.PROFESIONAL -> "profesional"; RolEquipo.DOCENTE -> "docente"; RolEquipo.TUTOR -> "tutor"; RolEquipo.ADMIN -> "admin" }
@@ -323,7 +324,7 @@ private fun ChatEquipo(repo: EquipoRepositorio, rol: RolEquipo, id: String, conv
     LaunchedEffect(mensajes.size) { if (mensajes.isNotEmpty()) lista.animateScrollToItem(mensajes.size - 1) }
 
     fun accion(bloque: suspend () -> Unit) = scope.launch {
-        try { bloque(); cargar(); aviso = null } catch (e: Exception) { aviso = ExplicacionError.explicar(e.message, (e as? com.inacap.health.data.remote.ErrorNube)?.codigo) }
+        try { bloque(); cargar(); aviso = null } catch (e: Exception) { aviso = e }
     }
 
     Scaffold(topBar = { BarraSuperior("${TEMAS[conv?.tema] ?: "Chat"} · ${etiquetaEstudiante(id)}", onVolver) }) { padding ->
@@ -359,7 +360,7 @@ private fun ChatEquipo(repo: EquipoRepositorio, rol: RolEquipo, id: String, conv
                     items(bitacora) { b -> TextoSecundario("${horaCorta(b.fecha)} · ${b.accion}${b.nota?.let { ": $it" } ?: ""}") }
                 }
             }
-            aviso?.let { TextoSecundario(it, Modifier.padding(horizontal = 16.dp)) }
+            aviso?.let { Box(Modifier.padding(horizontal = 16.dp)) { ErrorSimple(it) } }
             if (puedeEscribir) {
                 Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(texto, { texto = it.take(1000) }, placeholder = { Text("Escribe tu respuesta") }, modifier = Modifier.weight(1f), maxLines = 4)
@@ -423,6 +424,11 @@ private fun CuentaEquipo(repo: EquipoRepositorio, rol: RolEquipo, onSalir: () ->
 }
 
 
+/** Error en lenguaje simple; el técnico solo dentro de «Ver detalle del error». */
+@Composable
+private fun ErrorSimple(e: Exception) =
+    com.inacap.health.ui.components.DetalleError(ExplicacionError.simple(e.message, (e as? ErrorNube)?.codigo), e.message ?: e.javaClass.simpleName)
+
 // ---------- Vistas por rol ----------
 
 /** Tutor: cifras sin nombres de las consultas que puede ver (lo filtra la RLS). */
@@ -462,14 +468,14 @@ private fun BitacoraGeneral(repo: EquipoRepositorio, onAbrir: (String) -> Unit) 
 @Composable
 private fun <T : Any> Cargando(cargar: suspend () -> T, contenido: @Composable (T) -> Unit) {
     var dato by remember { mutableStateOf<T?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf<Exception?>(null) }
     LaunchedEffect(Unit) {
-        try { dato = cargar() } catch (e: Exception) { error = ExplicacionError.explicar(e.message, (e as? ErrorNube)?.codigo) }
+        try { dato = cargar() } catch (e: Exception) { error = e }
     }
     val d = dato
     val e = error
     when {
-        e != null -> TextoSecundario(e, Modifier.padding(16.dp))
+        e != null -> Box(Modifier.padding(16.dp)) { ErrorSimple(e) }
         d == null -> TextoSecundario("Cargando…", Modifier.padding(16.dp))
         else -> contenido(d)
     }

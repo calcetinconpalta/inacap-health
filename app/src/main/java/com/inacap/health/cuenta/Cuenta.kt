@@ -63,7 +63,7 @@ object ReglasCuenta {
         val t = (e.message ?: "").lowercase()
         val codigo = (e as? ErrorNube)?.codigo
         return when {
-            codigo == -1 -> ExplicacionError.fallaDeRed(e.message) ?: "No hubo respuesta del servidor. Revisa tu internet e intenta de nuevo."
+            codigo == -1 -> ExplicacionError.redSimple(e.message) ?: "No hubo respuesta. Revisa tu internet e intenta de nuevo."
             "invalid_credentials" in t || "invalid login" in t -> "Correo o contraseña incorrectos."
             "email_not_confirmed" in t || "not confirmed" in t -> "Primero confirma tu correo con el enlace que te enviamos."
             "email_exists" in t || "already been registered" in t || "already registered" in t || "user_already_exists" in t ->
@@ -71,8 +71,8 @@ object ReglasCuenta {
             "weak_password" in t -> "La contraseña es muy débil: usa al menos 8 caracteres con letras y números."
             "email_address_invalid" in t || "invalid format" in t -> "Revisa el correo: el formato no es válido."
             codigo == 429 || "rate limit" in t -> "Demasiados intentos. Espera unos minutos e intenta de nuevo."
-            "anonymous" in t && "disabled" in t -> "Las cuentas no están activadas en el servidor (inicio anónimo desactivado)."
-            codigo == 403 -> "El servidor rechazó la solicitud por seguridad. Revisa que el correo y la contraseña no tengan caracteres poco comunes e intenta de nuevo."
+            "anonymous" in t && "disabled" in t -> "Las cuentas no están disponibles en este momento. Intenta más tarde."
+            codigo == 403 -> "La solicitud fue rechazada por seguridad. Revisa que el correo y la contraseña no tengan caracteres poco comunes e intenta de nuevo."
             else -> "No se pudo completar (error ${codigo ?: e.javaClass.simpleName}). Intenta de nuevo más tarde."
         }
     }

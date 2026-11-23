@@ -38,6 +38,22 @@ class ExplicacionErrorTest {
         assertTrue(ExplicacionError.paraPersona("Supabase upsert usuarios: HTTP 500 boom", 500).contains("problema"))
     }
 
+    @Test fun mensajesSimplesSinNombresDeServicios() {
+        val casos = listOf(
+            "Supabase rpc tomar_conversacion: HTTP 403 {\"code\":\"42501\",\"message\":\"new row violates row-level security policy for table \\\"conversaciones\\\"\"}" to 403,
+            "Supabase upsert usuarios: HTTP 404 {\"code\":\"PGRST205\"}" to 404,
+            "Firestore crear eventos: HTTP 403 PERMISSION_DENIED" to 403,
+            "Sin respuesta (GET /rest/v1/x): UnknownHostException" to -1,
+            "Supabase: HTTP 500" to 500
+        )
+        casos.forEach { (m, c) ->
+            listOf(ExplicacionError.simple(m, c), ExplicacionError.paraPersona(m, c)).forEach { r ->
+                listOf("Supabase", "Firebase", "Firestore", "RLS", "row-level", "42501", "SQL", "servidor", "DNS").forEach { t -> assertFalse("«$r» dice $t", r.contains(t)) }
+            }
+        }
+        assertTrue(ExplicacionError.simple("x 42501 row-level security", 403).contains("permiso"))
+    }
+
     @Test fun laFallaDeRedIncluyeMetodoRutaYCausa() {
         val m = com.inacap.health.data.remote.Http.falla("POST", "https://x.supabase.co/rest/v1/usuarios?on_conflict=id",
             java.io.IOException("envoltura", java.net.SocketTimeoutException("timeout")))

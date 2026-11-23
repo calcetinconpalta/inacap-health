@@ -93,7 +93,7 @@ class OrientacionViewModel(application: Application) : AndroidViewModel(applicat
         catch (e: Exception) {
             val codigo = (e as? com.inacap.health.data.remote.ErrorNube)?.codigo
             _error.value = when {
-                codigo == -1 -> (com.inacap.health.data.remote.ExplicacionError.fallaDeRed(e.message) ?: "No hubo respuesta del servidor.") + " Intenta de nuevo."
+                codigo == -1 -> (com.inacap.health.data.remote.ExplicacionError.redSimple(e.message) ?: "No hubo respuesta.") + " Intenta de nuevo."
                 codigo == 429 -> "Enviaste muchos mensajes seguidos. Espera un minuto e intenta de nuevo."
                 codigo != null -> "El servicio de orientación rechazó la acción (error $codigo). Intenta de nuevo."
                 else -> "No se pudo completar (${e.javaClass.simpleName}). Intenta de nuevo."
