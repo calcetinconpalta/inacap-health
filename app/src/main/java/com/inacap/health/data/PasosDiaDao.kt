@@ -22,6 +22,9 @@ interface PasosDiaDao {
     @Query("SELECT * FROM pasos_dia ORDER BY fecha ASC")
     suspend fun getAllUnaVez(): List<PasosDia>
 
+    @Query("SELECT * FROM pasos_dia ORDER BY fecha ASC")
+    fun observarTodos(): Flow<List<PasosDia>>
+
     @Query("DELETE FROM pasos_dia")
     suspend fun deleteAll()
 

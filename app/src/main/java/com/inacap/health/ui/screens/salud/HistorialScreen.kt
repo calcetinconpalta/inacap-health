@@ -14,6 +14,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -48,6 +50,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.inacap.health.data.RegistroBiometrico
@@ -121,26 +124,9 @@ fun HistorialScreen(
                 containerColor = MaterialTheme.colorScheme.background,
                 contentColor = RedInacap
             ) {
-                Tab(
-                    selected = selectedTabIndex == 0,
-                    onClick = { selectedTabIndex = 0 },
-                    text = { Text("Peso e IMC") }
-                )
-                Tab(
-                    selected = selectedTabIndex == 1,
-                    onClick = { selectedTabIndex = 1 },
-                    text = { Text("Agua") }
-                )
-                Tab(
-                    selected = selectedTabIndex == 2,
-                    onClick = { selectedTabIndex = 2 },
-                    text = { Text("Actividad") }
-                )
-                Tab(
-                    selected = selectedTabIndex == 3,
-                    onClick = { selectedTabIndex = 3 },
-                    text = { Text("Tests") }
-                )
+                listOf("Por mes", "Peso e IMC", "Agua", "Actividad", "Tests").forEachIndexed { i, t ->
+                    Tab(selected = selectedTabIndex == i, onClick = { selectedTabIndex = i }, text = { Text(t, maxLines = 1) })
+                }
             }
 
             Box(
@@ -149,11 +135,57 @@ fun HistorialScreen(
                     .weight(1f)
             ) {
                 when (selectedTabIndex) {
-                    0 -> TabPesoImcContent(viewModel = viewModel, onNavigate = onNavigate)
-                    1 -> TabAguaContent(viewModel = viewModel)
-                    2 -> TabActividadContent(viewModel = viewModel, onNavigate = onNavigate)
-                    3 -> TabTestsContent(viewModel = viewModel, onNavigate = onNavigate)
+                    0 -> TabPorMesContent(viewModel = viewModel)
+                    1 -> TabPesoImcContent(viewModel = viewModel, onNavigate = onNavigate)
+                    2 -> TabAguaContent(viewModel = viewModel)
+                    3 -> TabActividadContent(viewModel = viewModel, onNavigate = onNavigate)
+                    4 -> TabTestsContent(viewModel = viewModel, onNavigate = onNavigate)
                 }
+            }
+        }
+    }
+}
+
+/** Tarea 18: el mes por semanas (agua, pasos, pulso e IMC) con ‹ mes anterior · mes siguiente ›. */
+@Composable
+private fun TabPorMesContent(viewModel: HistorialViewModel) {
+    val registros by viewModel.todosRegistros.collectAsState()
+    val pasos by viewModel.todosPasos.collectAsState()
+    val hoy = remember { java.time.LocalDate.now() }
+    var mesTexto by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(java.time.YearMonth.from(hoy).toString()) }
+    val mes = java.time.YearMonth.parse(mesTexto)
+    val semanas = remember(registros, pasos, mesTexto) { HistorialMensual.resumir(mes, hoy, registros, pasos) }
+    val cl = java.util.Locale.forLanguageTag("es-CL")
+    val corto = java.time.format.DateTimeFormatter.ofPattern("d MMM", cl)
+
+    androidx.compose.foundation.lazy.LazyColumn(
+        Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { mesTexto = mes.minusMonths(1).toString() }) {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Mes anterior")
+                }
+                Text(
+                    HistorialMensual.titulo(mes), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground, textAlign = TextAlign.Center, modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = { mesTexto = mes.plusMonths(1).toString() }, enabled = HistorialMensual.puedeAvanzar(mes, hoy)) {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Mes siguiente")
+                }
+            }
+        }
+        if (semanas.all { it.vacia }) item {
+            com.inacap.health.ui.components.TextoSecundario("No hay registros en este mes.")
+        }
+        items(semanas.size) { i ->
+            val s = semanas[i]
+            com.inacap.health.ui.components.Tarjeta(titulo = "Semana ${s.numero} · ${s.desde.format(corto)} – ${s.hasta.format(corto)}") {
+                com.inacap.health.ui.components.FilaValor("Agua por día", s.aguaMlPorDia?.let { SaludLogic.litrosYVasos(it) } ?: "—")
+                com.inacap.health.ui.components.FilaValor("Pasos por día", s.pasosPorDia?.let { String.format(cl, "%,d", it) } ?: "—")
+                com.inacap.health.ui.components.FilaValor("Pulso promedio", s.pulsoPromedio?.let { "$it lpm" } ?: "—")
+                com.inacap.health.ui.components.FilaValor("IMC", s.imc?.let { String.format(cl, "%.1f", it) } ?: "—")
             }
         }
     }

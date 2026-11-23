@@ -52,6 +52,12 @@ class HistorialViewModel(application: Application) : AndroidViewModel(applicatio
     val pulsos: StateFlow<List<RegistroBiometrico>> = registroDao.getPulsosDesc()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // Tarea 18: historial por mes, semana a semana.
+    val todosRegistros: StateFlow<List<RegistroBiometrico>> = registroDao.getAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val todosPasos: StateFlow<List<PasosDia>> = app.database.pasosDiaDao().observarTodos()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val resultadosScoffDesc: StateFlow<List<ResultadoScoff>> = scoffDao.getAll()
         .stateIn(
             scope = viewModelScope,
