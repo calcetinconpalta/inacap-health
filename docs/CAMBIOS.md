@@ -1,3 +1,59 @@
+# Cambios · versión 1.3.3
+
+> **Antes de instalar esta versión:** ejecuta `backend/supabase/schema.sql` completo en Supabase (agrega la sede, las invitaciones del equipo, la sesión única, los antecedentes cifrados y los cuestionarios). La app nueva envía la sede, y un servidor sin esa columna rechaza los envíos. Publica también `backend/firebase/firestore.rules` y agrega `confirmado.html` en *Supabase → Authentication → URL Configuration → Redirect URLs*. Completa `BIENESTAR_EMAIL` en `.env` / `local.properties`.
+
+## Cuentas y equipo
+- **Inicio de sesión único con detección de rol:** una sola pantalla para estudiantes y equipo, siempre disponible en Perfil. Una cuenta del equipo nunca queda como alumno.
+- **Todas las cuentas nacen como alumno; el equipo se pre-registra.** El administrador registra el correo y el rol en el panel. El rol se activa solo cuando esa cuenta **confirma su correo**, para que nadie se quede con el rol de otra persona. Se quitó «Crear cuenta del equipo».
+- **Una sola sesión activa por cuenta:** al entrar en un teléfono nuevo se cierra la del anterior, que vuelve a «Iniciar sesión» con el aviso «Iniciaste sesión en otro teléfono». Una cuenta nunca pasa en silencio a una sesión anónima.
+- **El correo de confirmación vuelve a la app** (`dashboard/confirmado.html` + enlace `inacaphealth://confirmado`), no al panel. Al volver, la app revisa sola la confirmación.
+- **Datos por rol dentro de la app:**
+  - Tutor: monitoreo con cifras sin nombres.
+  - Docente: bitácora de supervisión.
+  - Administrador: resumen, equipo y seguridad.
+  - Bienestar: ya no se le llama «profesional» en lo que ve el estudiante.
+- **Pedir los datos al crear la cuenta** («Omitir por ahora»). Inicio invita a completarlos mientras falten.
+
+## Salud y bienestar
+- **Rediseño rojo y blanco INACAP:**
+  - Banda roja con el saludo y un hero con gradient mesh y parallax por dato (agua, pasos, pulso, IMC).
+  - Botón principal según el dato y barra inferior flotante con la pestaña activa en rojo.
+  - La intensidad del hero se ajusta en `ui/theme/Diseno.kt`. Respeta «quitar animaciones».
+- **Agua en vasos y litros:** «Llevas 3 de 8 vasos (0,75 de 2 L)», «+ 1 vaso» y recomendación según el peso. No hay «ml» en pantalla.
+- **Pasos en vivo** con el sensor mientras Inicio está abierto, más aviso de ahorro de batería en marcas que cierran apps.
+- **Reloj automático:** se sincroniza al abrir y cada 5 minutos. Muestra «Pulso del reloj: X lpm, hace N min» y aclara que no es en tiempo real.
+- **Historial por mes, semana a semana** (agua, pasos, pulso, IMC y ánimo) con ‹ mes anterior · mes siguiente ›.
+- **«¿Cómo te sientes hoy?»** con 5 gatitos en Inicio. Se guarda solo en el teléfono. Tres días seguidos «Mal» o «Muy mal» sugieren apoyo con suavidad.
+- **Cuestionarios en Bienestar:**
+  - WHO-5, PHQ-2 y PHQ-9, con texto y cortes verificados (`docs/CUESTIONARIOS.md`).
+  - PHQ-9: si la pregunta 9 no es «Nunca», se muestra una pantalla de ayuda (\*4141, Salud Responde, 131) que no se salta.
+  - GAD-2/7, PSS-10, AUDIT-C e IPAQ quedan listados pero desactivados hasta verificar su texto en español.
+- **SCOFF solo con Sí y No**, grandes y separados. Ya no está en Inicio.
+- **Orientación (HU-13): recomienda apoyo sin bloquear.** Con un SCOFF en alerta de los últimos 30 días se muestra la recomendación y debajo «Seguir con mi consulta general». Antes bloqueaba la consulta para siempre. Actualizado en el Product Backlog.
+- **Enviar el PDF a Bienestar** desde la app de correo del propio estudiante, con el destinatario fijo y un límite de 3 envíos al día y 10 al mes.
+- **Sede INACAP** (por ahora Valdivia), sin GPS. A la nube va solo la sede, y el panel oculta las sedes con menos de 5 personas.
+
+## Privacidad y seguridad
+- **Antecedentes de salud para quien atiende:** para pedir orientación o apoyo se comparten las patologías, alergias y medicamentos, **cifrados de extremo a extremo** para Bienestar. Nadie más los lee y no se usan para estadísticas. El panel los descifra en el navegador de Bienestar. **Términos versión 4** (la app pide aceptar de nuevo).
+- **Regla para Bienestar:** no indican ni sugieren medicamentos por chat.
+- **Espera del PIN a prueba de cambio de hora y de reinicio:** usa un reloj monótono y la espera queda guardada.
+- **Firestore:** acepta solo los campos de evento que envía la app, con textos de máximo 120 caracteres.
+- **Sin nombres de servicios ni «servidor» en ninguna versión.** El detalle técnico queda solo en «Ver detalle del error».
+- **Seguridad:** explica que el PIN y la huella bloquean la pantalla y que los datos se cifran aparte.
+- **Botón atrás:** desde un chat vuelve a la lista, desde otra pestaña del equipo vuelve a Solicitudes y desde Inicio cierra la app. Ya no queda la pantalla negra.
+
+## Pruebas
+- **App:** 125 pruebas unitarias (Robolectric) más lint. La prueba de navegación guarda una captura de Inicio en `app/build/capturas/inicio.png`.
+- **Firestore:** pruebas nuevas en el emulador.
+- **SQL:** suites nuevas `07` (invitaciones y sesión única), `08` (sede) y `09` (antecedentes); `00` y `05` actualizadas. **Pendiente de ejecutar** en un PostgreSQL local (ver `backend/supabase/test/README.md`).
+
+## Pendiente
+- Verificar el texto en español de GAD-2/7, PSS-10, AUDIT-C e IPAQ para activarlos.
+- El docente supervisor debe definir el protocolo de seguimiento cuando alguien responde la pregunta 9 del PHQ-9.
+- Decidir dónde va el morado y definir los roles nuevos.
+
+---
+
 # Cambios · versión 1.3.2
 
 - **«Aceptar todo» en los términos**: una casilla que marca (o desmarca) las tres de una vez. Indica que incluye compartir datos anónimos, que sigue siendo opcional y se puede desmarcar aparte. Prueba: `AceptarTodoTest`.
