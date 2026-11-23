@@ -84,6 +84,27 @@ class SaludViewModel(application: Application) : AndroidViewModel(application) {
     /** Escucha el sensor mientras quien llama siga activo (Inicio a la vista). */
     suspend fun pasosEnVivo() = app.pasos.escucharEnVivo()
 
+    private val hcPrefs = application.getSharedPreferences("hc_prefs", Context.MODE_PRIVATE)
+
+    /** Último pulso y pasos de hoy que llegaron del reloj (null si no hay reloj vinculado). */
+    val reloj: StateFlow<com.inacap.health.salud.DatosReloj?> = flujoInicioDelDia()
+        .flatMapLatest { inicio -> hcPrefs.observar { com.inacap.health.salud.RelojResumen.leer(it, CalculoPasos.fecha(inicio)) } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /**
+     * Trae el reloj solo, sin tocar "Sincronizar ahora": cada [RelojResumen.CADA_MS] mientras
+     * quien llama siga activo (Inicio a la vista). La primera vez ya la hace [actualizarPasos].
+     */
+    suspend fun sincronizarRelojPeriodico() {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) return
+        while (true) {
+            kotlinx.coroutines.delay(com.inacap.health.salud.RelojResumen.CADA_MS)
+            if (com.inacap.health.salud.HealthConnectDisponibilidad.vinculado(app)) {
+                runCatching { com.inacap.health.salud.HealthConnectRepositorio(app).importar(dias = 2) }
+            }
+        }
+    }
+
     val nivelActividadGuardado: String
         get() = sharedPrefs.getString("nivel_actividad", "Moderado") ?: "Moderado"
 

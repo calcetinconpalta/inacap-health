@@ -10,6 +10,9 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
+import androidx.health.connect.client.request.ReadRecordsRequest
+import java.time.Duration
+import java.time.Instant
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.inacap.health.HealthApp
 import com.inacap.health.data.RegistroBiometrico
@@ -39,6 +42,40 @@ object HealthConnectDisponibilidad {
 
     fun ultimaSincronizacion(context: Context) =
         context.getSharedPreferences("hc_prefs", Context.MODE_PRIVATE).getLong("ultima", 0)
+}
+
+/** Lo último que llegó del reloj (vía Health Connect), para mostrarlo en Inicio. */
+data class DatosReloj(val bpm: Int?, val bpmEn: Long, val pasosHoy: Int?, val actualizadoEn: Long)
+
+/** Lógica pura de la tarjeta del reloj (probada en la JVM). */
+object RelojResumen {
+    /** Cada cuánto se trae el reloj solo mientras Inicio está abierto. */
+    const val CADA_MS = 5 * 60_000L
+
+    /** "recién", "hace 8 min", "hace 2 h", "hace 3 días". */
+    fun hace(desde: Long, ahora: Long): String {
+        val min = ((ahora - desde).coerceAtLeast(0) / 60_000)
+        return when {
+            min < 1 -> "recién"
+            min < 60 -> "hace $min min"
+            min < 24 * 60 -> "hace ${min / 60} h"
+            else -> "hace ${min / (24 * 60)} ${if (min / (24 * 60) == 1L) "día" else "días"}"
+        }
+    }
+
+    fun textoPulso(d: DatosReloj, ahora: Long): String? =
+        d.bpm?.let { "Pulso del reloj: $it lpm, ${hace(d.bpmEn, ahora)}" }
+
+    /** Lee lo guardado; null si nunca se vinculó un reloj. */
+    fun leer(prefs: android.content.SharedPreferences, hoy: String): DatosReloj? {
+        if (!prefs.getBoolean("vinculado", false)) return null
+        return DatosReloj(
+            bpm = prefs.getInt("fc_ultimo", 0).takeIf { it in 30..220 },
+            bpmEn = prefs.getLong("fc_ultimo_ms", 0),
+            pasosHoy = prefs.getInt("pasos_reloj", 0).takeIf { it > 0 && prefs.getString("pasos_reloj_fecha", null) == hoy },
+            actualizadoEn = prefs.getLong("ultima", 0)
+        )
+    }
 }
 
 /** Lectura de pasos y frecuencia cardíaca (solo Android 8+). */
@@ -72,16 +109,37 @@ class HealthConnectRepositorio(private val context: Context) {
             )
         )
         var importados = 0
+        var pasosHoy = 0L
         for (g in porDia) {
             val fecha = g.startTime.toLocalDate()
             g.result[StepsRecord.COUNT_TOTAL]?.let { pasos ->
+                if (fecha == hoy) pasosHoy = pasos
                 if (pasos > 0) { app.pasos.registrarExterno(fecha.toString(), pasos.toInt()); importados++ }
             }
             g.result[HeartRateRecord.BPM_AVG]?.let { bpm -> guardarPulsoDelDia(fecha, bpm.toInt(), zona) }
         }
-        prefs.edit { putLong("ultima", System.currentTimeMillis()); putBoolean("vinculado", true) }
+        val ultimoPulso = runCatching { ultimaMuestraPulso() }.getOrNull()
+        prefs.edit {
+            putLong("ultima", System.currentTimeMillis()); putBoolean("vinculado", true)
+            putInt("pasos_reloj", pasosHoy.toInt()); putString("pasos_reloj_fecha", hoy.toString())
+            ultimoPulso?.let { (bpm, en) -> putInt("fc_ultimo", bpm); putLong("fc_ultimo_ms", en) }
+        }
         app.sync.registrarEvento("health_connect_sync", mapOf("dias" to importados))
         return importados
+    }
+
+    /** La muestra de pulso más reciente de las últimas 24 h (bpm, momento en ms). */
+    private suspend fun ultimaMuestraPulso(): Pair<Int, Long>? {
+        val respuesta = cliente.readRecords(
+            ReadRecordsRequest(
+                recordType = HeartRateRecord::class,
+                timeRangeFilter = TimeRangeFilter.after(Instant.now().minus(Duration.ofHours(24))),
+                ascendingOrder = false,
+                pageSize = 5
+            )
+        )
+        val muestra = respuesta.records.flatMap { it.samples }.maxByOrNull { it.time } ?: return null
+        return muestra.beatsPerMinute.toInt() to muestra.time.toEpochMilli()
     }
 
     /** Un registro por día con el promedio; volver a importar lo actualiza (no duplica). */

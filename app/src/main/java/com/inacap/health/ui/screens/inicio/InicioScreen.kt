@@ -1,6 +1,7 @@
 package com.inacap.health.ui.screens.inicio
 
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -185,6 +186,9 @@ fun InicioScreen(
         // Tarjeta Pasos (HU-10: metas de movimiento, sin calorías)
         TarjetaPasos(saludViewModel = saludViewModel, onNavigate = onNavigate)
 
+        // Reloj: se trae solo al abrir y cada 5 min mientras Inicio está abierto.
+        TarjetaReloj(saludViewModel = saludViewModel, onNavigate = onNavigate)
+
         // Tarjeta IMC
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -332,6 +336,40 @@ fun InicioScreen(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+@Composable
+private fun TarjetaReloj(saludViewModel: SaludViewModel, onNavigate: (String) -> Unit) {
+    val datos by saludViewModel.reloj.collectAsState()
+    val ciclo = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(Unit) { ciclo.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) { saludViewModel.sincronizarRelojPeriodico() } }
+    // Para que "hace N min" avance aunque no lleguen datos nuevos.
+    var ahora by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(30_000); ahora = System.currentTimeMillis() } }
+    val d = datos ?: return
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable { onNavigate(Routes.HEALTH_CONNECT) },
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("Tu reloj", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+            Text(
+                com.inacap.health.salud.RelojResumen.textoPulso(d, ahora) ?: "Aún no llega pulso del reloj en las últimas 24 horas.",
+                style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface
+            )
+            d.pasosHoy?.let {
+                Text(
+                    "Pasos del reloj hoy: ${String.format(Locale.forLanguageTag("es-CL"), "%,d", it)}",
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Text(
+                "Revisado ${com.inacap.health.salud.RelojResumen.hace(d.actualizadoEn, ahora)}. Los datos llegan desde la app de tu reloj con unos minutos de atraso; no es en tiempo real.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
