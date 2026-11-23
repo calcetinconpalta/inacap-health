@@ -1,0 +1,314 @@
+<title>INACAP Health esencia</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+<style>
+/* Layout: encabezado + dos teléfonos (Inicio claro y noche) que se apilan en pantallas chicas. */
+:root {
+  --bg: #f2f2f3;
+  --fg: #141416;
+  --muted: #61616a;
+  --rojo-pagina: #d6001c;
+  --ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #0c0c0e; --fg: #f1f1f3; --muted: #a0a0a8; --rojo-pagina: #ff4053; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #0c0c0e; --fg: #f1f1f3; --muted: #a0a0a8; --rojo-pagina: #ff4053; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--ui); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+.envoltura { max-width: 900px; margin: 0 auto; display: grid; gap: 26px; }
+header h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.02em; text-wrap: balance; }
+header h1 .r { color: var(--rojo-pagina); }
+header p { margin: 6px 0 0; color: var(--muted); max-width: 72ch; }
+.fila { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 24px; align-items: start; }
+.opcion { display: grid; gap: 10px; min-width: 0; justify-items: center; }
+.opcion h2 { margin: 0; font-size: 13px; font-weight: 700; color: var(--muted); letter-spacing: .05em; text-transform: uppercase; }
+.pista-uso { font-size: 13px; color: var(--muted); margin: 0; text-align: center; }
+footer { color: var(--muted); font-size: 14px; max-width: 76ch; display: grid; gap: 8px; }
+footer b { color: var(--fg); }
+
+/* ---------- App (cada maqueta fija su tema) ---------- */
+.tel { width: 100%; max-width: 330px; border-radius: 38px; padding: 9px; background: #000; }
+.app {
+  --s: #ffffff; --s2: #f4f4f6; --luz: #ffffff; --sombra: #d9d9df; --fg: #141418; --sub: #5f5f68;
+  --rojo: #d6001c; --rojo-osc: #a80016; --morado: #7a3fe0;
+  --agua: #1769e0; --pasos: #e65c00; --pulso: #c62828; --imc: #00796b;
+  position: relative; border-radius: 30px; overflow: hidden; height: 690px;
+  background: var(--s2); color: var(--fg); font-family: var(--ui); display: flex; flex-direction: column;
+}
+.app.noche {
+  --s: #1c1c20; --s2: #121215; --luz: #26262b; --sombra: #08080a; --fg: #f1f1f4; --sub: #a3a3ad;
+  --rojo: #c8001a; --rojo-osc: #7d0010; --morado: #b99bff;
+  --agua: #4a90ff; --pasos: #ff8a2b; --pulso: #ff5a5a; --imc: #2ec4ae;
+}
+.num { font-variant-numeric: tabular-nums; }
+.a { color: var(--morado); }
+
+/* Banda roja INACAP con el hero dentro */
+.banda { background: var(--rojo); color: #fff; padding: 12px 18px 18px; border-radius: 0 0 26px 26px; position: relative; z-index: 1; }
+.estado { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; opacity: .95; }
+.marca { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+.marca span { font-size: 12px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; opacity: .92; }
+.ini { width: 34px; height: 34px; border-radius: 50%; background: #fff; color: var(--rojo); display: grid; place-items: center; font-weight: 900; font-size: 14px; }
+.banda h3 { margin: 4px 0 0; font-size: 27px; font-weight: 900; letter-spacing: -.03em; line-height: 1.1; }
+.banda h3 .a { color: #e7d9ff; }
+.banda small.fecha { display: block; font-size: 12.5px; opacity: .88; margin-top: 2px; }
+
+/* Hero: tarjeta propia con gradient mesh, sombra y borde de luz para despegarla de la banda */
+.hero { position: relative; height: 156px; margin-top: 12px; overflow: hidden; border-radius: 20px; isolation: isolate;
+  box-shadow: 0 14px 28px rgba(50,0,8,.38), 0 3px 8px rgba(50,0,8,.25); }
+.hero::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 3;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), inset 0 0 0 1px rgba(255,255,255,.16); }
+/* Una malla distinta por dato, siempre anclada en el rojo INACAP */
+.c-fondo > div:nth-child(1) { background:
+  radial-gradient(60% 85% at 0% 0%, #ff5a73 0%, transparent 62%),
+  radial-gradient(58% 80% at 100% 100%, #2f6ff2 0%, transparent 64%),
+  radial-gradient(48% 70% at 100% 0%, #ff8a5c 0%, transparent 60%),
+  radial-gradient(60% 85% at 0% 100%, #6e0016 0%, transparent 66%), #c8001a; }
+.c-fondo > div:nth-child(2) { background:
+  radial-gradient(55% 80% at 100% 0%, #ffb23a 0%, transparent 62%),
+  radial-gradient(60% 85% at 0% 100%, #ff6a2b 0%, transparent 64%),
+  radial-gradient(48% 70% at 0% 0%, #ff4d6d 0%, transparent 60%),
+  radial-gradient(58% 80% at 100% 100%, #82001a 0%, transparent 66%), #cf1020; }
+.c-fondo > div:nth-child(3) { background:
+  radial-gradient(58% 85% at 0% 0%, #ff2d6f 0%, transparent 62%),
+  radial-gradient(60% 85% at 100% 100%, #8e0040 0%, transparent 64%),
+  radial-gradient(48% 70% at 100% 0%, #ff7a96 0%, transparent 60%),
+  radial-gradient(55% 80% at 0% 100%, #5e0012 0%, transparent 66%), #c4001f; }
+.c-fondo > div:nth-child(4) { background:
+  radial-gradient(58% 82% at 100% 100%, #00b39b 0%, transparent 64%),
+  radial-gradient(55% 80% at 0% 0%, #ff5a73 0%, transparent 62%),
+  radial-gradient(48% 70% at 100% 0%, #ff8a5c 0%, transparent 60%),
+  radial-gradient(58% 82% at 0% 100%, #6e0016 0%, transparent 66%), #c8001a; }
+.app.noche .c-fondo > div { filter: brightness(.84) saturate(1.05); }
+.app.noche .hero { box-shadow: 0 14px 30px rgba(0,0,0,.6), 0 3px 8px rgba(0,0,0,.45); }
+.capa { position: absolute; top: 0; bottom: 0; left: 0; width: 400%; display: flex; will-change: transform; transition: transform .75s cubic-bezier(.22,.8,.2,1); }
+.capa > div { flex: 0 0 25%; position: relative; }
+.c-fondo > div::before, .c-fondo > div::after { content: ""; position: absolute; border-radius: 50%; background: #fff; }
+.c-fondo > div::before { width: 170px; height: 170px; right: -40px; top: -70px; opacity: .10; }
+.c-fondo > div::after { width: 110px; height: 110px; left: -30px; bottom: -60px; opacity: .07; }
+.c-media svg { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 62px; }
+.c-media path { fill: #fff; opacity: .16; }
+.c-frente > div { display: grid; align-content: center; padding: 8px 18px 22px; gap: 1px; }
+.c-frente em { font-style: normal; font-size: 11.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; display: flex; align-items: center; gap: 6px; opacity: .95; }
+.c-frente em i { width: 9px; height: 9px; border-radius: 50%; background: var(--k); box-shadow: 0 0 0 2px #fff; }
+.c-frente b { font-size: 40px; font-weight: 900; letter-spacing: -.04em; line-height: 1.05; }
+.c-frente b small { font-size: 15px; font-weight: 800; letter-spacing: 0; opacity: .88; }
+.c-frente span { font-size: 13px; font-weight: 600; opacity: .9; }
+.k-agua { --k: var(--agua); } .k-pasos { --k: var(--pasos); } .k-pulso { --k: var(--pulso); } .k-imc { --k: var(--imc); }
+.puntos { position: absolute; right: 18px; bottom: 14px; display: flex; gap: 5px; z-index: 2; }
+.puntos i { width: 6px; height: 6px; border-radius: 3px; background: #fff; opacity: .45; transition: width .3s, opacity .3s; }
+.puntos i.on { width: 16px; opacity: 1; }
+
+.scroll { flex: 1; overflow: hidden; padding: 14px 16px 80px; display: grid; gap: 14px; align-content: start; }
+
+/* Íconos: blancos con relieve suave; el activo hundido y en rojo */
+.iconos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.icono { appearance: none; border: 0; background: var(--s); color: var(--sub); border-radius: 16px; padding: 10px 0 8px; display: grid; justify-items: center; gap: 4px;
+  font: 700 10.5px var(--ui); cursor: pointer; box-shadow: 4px 4px 10px var(--sombra), -4px -4px 10px var(--luz); transition: box-shadow .25s, color .25s; }
+.icono svg { width: 22px; height: 22px; fill: currentColor; }
+.icono:focus-visible { outline: 2px solid var(--rojo); outline-offset: 2px; }
+.icono[aria-pressed="true"] { color: var(--rojo); box-shadow: inset 3px 3px 8px var(--sombra), inset -3px -3px 8px var(--luz); }
+.app.noche .icono[aria-pressed="true"] { color: #ff5468; }
+
+.accion { appearance: none; border: 0; font: 800 15px var(--ui); color: #fff; background: var(--rojo); padding: 13px; border-radius: 14px; box-shadow: 0 4px 0 var(--rojo-osc); }
+
+.animo { background: var(--s); border-radius: 16px; padding: 14px; display: grid; gap: 10px; justify-items: center; box-shadow: 4px 4px 12px var(--sombra), -4px -4px 12px var(--luz); }
+.animo-t { font-size: 15px; font-weight: 800; color: var(--morado); }
+.gatos { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; width: 100%; }
+.gato { appearance: none; border: 0; background: var(--s); border-radius: 14px; padding: 7px 0; font-size: 24px; line-height: 1.2; cursor: pointer;
+  box-shadow: 3px 3px 8px var(--sombra), -3px -3px 8px var(--luz); transition: box-shadow .2s, transform .2s; }
+.gato[aria-pressed="true"] { box-shadow: inset 3px 3px 8px var(--sombra), inset -3px -3px 8px var(--luz), 0 0 0 2px var(--morado); transform: scale(.96); }
+.gato:focus-visible { outline: 2px solid var(--morado); outline-offset: 2px; }
+.animo-r { font-size: 13px; font-weight: 600; color: var(--sub); }
+.animo-r em { font-style: normal; font-weight: 800; color: var(--morado); }
+
+.tabs { position: absolute; left: 12px; right: 12px; bottom: 12px; border-radius: 18px; background: var(--s);
+  box-shadow: 4px 4px 14px var(--sombra), -4px -4px 14px var(--luz); display: grid; grid-template-columns: repeat(4, 1fr); padding: 8px 6px; }
+.tabs span { display: grid; justify-items: center; gap: 2px; font-size: 10px; font-weight: 700; color: var(--sub); padding: 4px 0; border-radius: 12px; }
+.tabs svg { width: 21px; height: 21px; fill: currentColor; }
+.tabs .on { color: #fff; background: var(--rojo); }
+
+@media (max-width: 640px) { .tel { max-width: 100%; } }
+@media (prefers-reduced-motion: reduce) { .capa, .puntos i, .icono, .gato { transition: none; } }
+</style>
+
+<div class="envoltura">
+  <header>
+    <h1>INACAP Health, de vuelta al rojo y blanco</h1>
+    <p>El rojo INACAP vuelve a mandar: el saludo y el hero con parallax viven dentro de una banda roja, el fondo es blanco y los botones principales son rojos. Se mantiene lo que te gustó: las capas en parallax, el relieve suave de las tarjetas y los gatitos. Cada dato conserva su color solo como un punto chico.</p>
+  </header>
+
+  <div class="fila">
+    <section class="opcion">
+      <h2>Inicio · claro</h2>
+      <div class="tel"><div class="app hero-app">
+        <div class="banda">
+          <div class="estado"><span>9:41</span><span>●●● 100%</span></div>
+          <div class="marca"><span>INACAP Health</span><span class="ini">A</span></div>
+          <h3>Hola, Ana</h3>
+          <small class="fecha">Lunes 23 de noviembre</small>
+          <div class="hero">
+            <div class="capa c-fondo"><div></div><div></div><div></div><div></div></div>
+            <div class="capa c-media">
+              <div><svg viewBox="0 0 300 62" preserveAspectRatio="none"><path d="M0 36 C60 8 120 62 180 34 S270 18 300 30 V62 H0Z"/></svg></div>
+              <div><svg viewBox="0 0 300 62" preserveAspectRatio="none"><path d="M0 40 C50 26 100 54 160 26 S260 44 300 22 V62 H0Z"/></svg></div>
+              <div><svg viewBox="0 0 300 62" preserveAspectRatio="none"><path d="M0 40 L70 40 L90 12 L110 56 L130 26 L150 40 L300 40 V62 H0Z"/></svg></div>
+              <div><svg viewBox="0 0 300 62" preserveAspectRatio="none"><path d="M0 32 C80 18 160 50 220 32 S280 26 300 36 V62 H0Z"/></svg></div>
+            </div>
+            <div class="capa c-frente">
+              <div class="k-agua"><em><i></i>Agua de hoy</em><b class="num">3 <small>de 9 vasos</small></b><span class="num">0,75 de 2,3 L</span></div>
+              <div class="k-pasos"><em><i></i>Pasos</em><b class="num">4.210</b><span class="num">Meta 6.000</span></div>
+              <div class="k-pulso"><em><i></i>Pulso</em><b class="num">68 <small>lpm</small></b><span>Reloj · hace 10 min</span></div>
+              <div class="k-imc"><em><i></i>IMC</em><b class="num">22,9</b><span>Dentro del rango</span></div>
+            </div>
+            <div class="puntos" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i></div>
+          </div>
+        </div>
+        <div class="scroll">
+          <div class="iconos" role="group" aria-label="Elegir dato">
+            <button class="icono" type="button" aria-pressed="true" data-i="0"><svg viewBox="0 0 24 24"><path d="M12 2.5S5.5 10 5.5 14.5a6.5 6.5 0 0 0 13 0C18.5 10 12 2.5 12 2.5z"/></svg>Agua</button>
+            <button class="icono" type="button" aria-pressed="false" data-i="1"><svg viewBox="0 0 24 24"><path d="M8.5 2C7 2 6 3.8 6 6.2c0 2 .8 3.6.6 5.3l3.3.5c.3-1.4 1.1-3.2 1.1-5.6C11 3.9 10 2 8.5 2zM6.6 13.2l3.3.5c.2 1.6-.4 3.3-2 3.3-1.4 0-1.8-1.6-1.3-3.8zM15.5 7C14 7 13 8.8 13 11.2c0 2 .8 3.6.6 5.3l3.3.5c.3-1.4 1.1-3.2 1.1-5.6C18 8.9 17 7 15.5 7zM13.6 18.2l3.3.5c.2 1.6-.4 3.3-2 3.3-1.4 0-1.8-1.6-1.3-3.8z"/></svg>Pasos</button>
+            <button class="icono" type="button" aria-pressed="false" data-i="2"><svg viewBox="0 0 24 24"><path d="M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6-8 11-8 11z"/></svg>Pulso</button>
+            <button class="icono" type="button" aria-pressed="false" data-i="3"><svg viewBox="0 0 24 24"><path d="M4 20V10h3v10zm6.5 0V4h3v16zM17 20v-7h3v7z"/></svg>IMC</button>
+          </div>
+          <button class="accion" type="button">+ 1 vaso</button>
+          <div class="animo">
+            <b class="animo-t">¿Cómo te sientes hoy?</b>
+            <div class="gatos" role="group" aria-label="Cómo te sientes hoy">
+              <button type="button" class="gato" aria-pressed="false" data-t="Muy mal">😿</button>
+              <button type="button" class="gato" aria-pressed="false" data-t="Mal">🙀</button>
+              <button type="button" class="gato" aria-pressed="false" data-t="Normal">😺</button>
+              <button type="button" class="gato" aria-pressed="true" data-t="Bien">😸</button>
+              <button type="button" class="gato" aria-pressed="false" data-t="Muy bien">😻</button>
+            </div>
+            <span class="animo-r">Hoy te sientes <em>Bien</em></span>
+          </div>
+        </div>
+        <div class="tabs">
+          <span class="on"><svg viewBox="0 0 24 24"><path d="M12 3 3 10v11h6v-6h6v6h6V10z"/></svg>Inicio</span>
+          <span><svg viewBox="0 0 24 24"><path d="M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6-8 11-8 11z"/></svg>Salud</span>
+          <span><svg viewBox="0 0 24 24"><path d="M4 4h16v12H8l-4 4z"/></svg>Bienestar</span>
+          <span><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6z"/></svg>Perfil</span>
+        </div>
+      </div></div>
+      <p class="pista-uso">Toca Agua, Pasos, Pulso o IMC, y un gatito</p>
+    </section>
+
+    <section class="opcion">
+      <h2>Inicio · noche</h2>
+      <div class="tel"><div class="app noche hero-app">
+        <div class="banda">
+          <div class="estado"><span>9:41</span><span>●●● 100%</span></div>
+          <div class="marca"><span>INACAP Health</span><span class="ini">A</span></div>
+          <h3>Hola, Ana</h3>
+          <small class="fecha">Lunes 23 de noviembre</small>
+          <div class="hero">
+            <div class="capa c-fondo"><div></div><div></div><div></div><div></div></div>
+            <div class="capa c-media">
+              <div><svg viewBox="0 0 300 62" preserveAspectRatio="none"><path d="M0 36 C60 8 120 62 180 34 S270 18 300 30 V62 H0Z"/></svg></div>
+              <div><svg viewBox="0 0 300 62" preserveAspectRatio="none"><path d="M0 40 C50 26 100 54 160 26 S260 44 300 22 V62 H0Z"/></svg></div>
+              <div><svg viewBox="0 0 300 62" preserveAspectRatio="none"><path d="M0 40 L70 40 L90 12 L110 56 L130 26 L150 40 L300 40 V62 H0Z"/></svg></div>
+              <div><svg viewBox="0 0 300 62" preserveAspectRatio="none"><path d="M0 32 C80 18 160 50 220 32 S280 26 300 36 V62 H0Z"/></svg></div>
+            </div>
+            <div class="capa c-frente">
+              <div class="k-agua"><em><i></i>Agua de hoy</em><b class="num">3 <small>de 9 vasos</small></b><span class="num">0,75 de 2,3 L</span></div>
+              <div class="k-pasos"><em><i></i>Pasos</em><b class="num">4.210</b><span class="num">Meta 6.000</span></div>
+              <div class="k-pulso"><em><i></i>Pulso</em><b class="num">68 <small>lpm</small></b><span>Reloj · hace 10 min</span></div>
+              <div class="k-imc"><em><i></i>IMC</em><b class="num">22,9</b><span>Dentro del rango</span></div>
+            </div>
+            <div class="puntos" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i></div>
+          </div>
+        </div>
+        <div class="scroll">
+          <div class="iconos" role="group" aria-label="Elegir dato">
+            <button class="icono" type="button" aria-pressed="true" data-i="0"><svg viewBox="0 0 24 24"><path d="M12 2.5S5.5 10 5.5 14.5a6.5 6.5 0 0 0 13 0C18.5 10 12 2.5 12 2.5z"/></svg>Agua</button>
+            <button class="icono" type="button" aria-pressed="false" data-i="1"><svg viewBox="0 0 24 24"><path d="M8.5 2C7 2 6 3.8 6 6.2c0 2 .8 3.6.6 5.3l3.3.5c.3-1.4 1.1-3.2 1.1-5.6C11 3.9 10 2 8.5 2zM6.6 13.2l3.3.5c.2 1.6-.4 3.3-2 3.3-1.4 0-1.8-1.6-1.3-3.8zM15.5 7C14 7 13 8.8 13 11.2c0 2 .8 3.6.6 5.3l3.3.5c.3-1.4 1.1-3.2 1.1-5.6C18 8.9 17 7 15.5 7zM13.6 18.2l3.3.5c.2 1.6-.4 3.3-2 3.3-1.4 0-1.8-1.6-1.3-3.8z"/></svg>Pasos</button>
+            <button class="icono" type="button" aria-pressed="false" data-i="2"><svg viewBox="0 0 24 24"><path d="M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6-8 11-8 11z"/></svg>Pulso</button>
+            <button class="icono" type="button" aria-pressed="false" data-i="3"><svg viewBox="0 0 24 24"><path d="M4 20V10h3v10zm6.5 0V4h3v16zM17 20v-7h3v7z"/></svg>IMC</button>
+          </div>
+          <button class="accion" type="button">+ 1 vaso</button>
+          <div class="animo">
+            <b class="animo-t">¿Cómo te sientes hoy?</b>
+            <div class="gatos" role="group" aria-label="Cómo te sientes hoy">
+              <button type="button" class="gato" aria-pressed="false" data-t="Muy mal">😿</button>
+              <button type="button" class="gato" aria-pressed="false" data-t="Mal">🙀</button>
+              <button type="button" class="gato" aria-pressed="false" data-t="Normal">😺</button>
+              <button type="button" class="gato" aria-pressed="true" data-t="Bien">😸</button>
+              <button type="button" class="gato" aria-pressed="false" data-t="Muy bien">😻</button>
+            </div>
+            <span class="animo-r">Hoy te sientes <em>Bien</em></span>
+          </div>
+        </div>
+        <div class="tabs">
+          <span class="on"><svg viewBox="0 0 24 24"><path d="M12 3 3 10v11h6v-6h6v6h6V10z"/></svg>Inicio</span>
+          <span><svg viewBox="0 0 24 24"><path d="M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6-8 11-8 11z"/></svg>Salud</span>
+          <span><svg viewBox="0 0 24 24"><path d="M4 4h16v12H8l-4 4z"/></svg>Bienestar</span>
+          <span><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6z"/></svg>Perfil</span>
+        </div>
+      </div></div>
+      <p class="pista-uso">Toca Agua, Pasos, Pulso o IMC, y un gatito</p>
+    </section>
+  </div>
+
+  <footer>
+    <span><b>Qué cambió:</b> la banda roja con el saludo y el hero vuelven a ser la cara de la app; fondo blanco en vez de gris; la pestaña activa y el botón principal en rojo sólido. El color de cada dato queda solo como un punto junto a su nombre.</span>
+    <span><b>El hero:</b> es una tarjeta propia con gradient mesh (manchas de color que se funden, siempre partiendo del rojo INACAP), con sombra y un borde de luz para que se despegue de la banda. Cada dato tiene su mezcla: un toque azul en agua, naranjo en pasos, magenta en pulso y verde azulado en IMC, y se desliza con el parallax.</span>
+    <span><b>Qué se mantiene:</b> el parallax al cambiar de dato (capas blancas translúcidas sobre el rojo), el relieve suave de íconos y tarjetas, y los gatitos (el morado del check-in es provisorio). Datos de ejemplo.</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  const ACCIONES = ["+ 1 vaso", "Ver mis pasos", "Medir pulso", "Calcular IMC"];
+  const RETRASO = { "c-fondo": 0.16, "c-media": 0.08, "c-frente": 0 };
+  const reducir = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  document.querySelectorAll(".animo").forEach((caja) => {
+    const gatos = caja.querySelectorAll(".gato");
+    const r = caja.querySelector(".animo-r em");
+    gatos.forEach((g) => g.addEventListener("click", () => {
+      gatos.forEach((x) => x.setAttribute("aria-pressed", String(x === g)));
+      r.textContent = g.dataset.t;
+    }));
+  });
+
+  document.querySelectorAll(".hero-app").forEach((app) => {
+    const capas = app.querySelectorAll(".capa");
+    const puntos = app.querySelectorAll(".puntos i");
+    const botones = app.querySelectorAll(".icono");
+    const accion = app.querySelector(".accion");
+
+    function ir(i) {
+      capas.forEach((capa) => {
+        const tipo = [...capa.classList].find((c) => c in RETRASO);
+        capa.style.transitionDelay = reducir.matches ? "0s" : RETRASO[tipo] + "s";
+        capa.style.transitionDuration = reducir.matches ? "0s" : "";
+        capa.style.transform = "translateX(" + (-25 * i) + "%)";
+      });
+      puntos.forEach((p, k) => p.classList.toggle("on", k === i));
+      botones.forEach((b, k) => b.setAttribute("aria-pressed", String(k === i)));
+      accion.textContent = ACCIONES[i];
+    }
+    botones.forEach((b) => b.addEventListener("click", () => ir(Number(b.dataset.i))));
+
+    const hero = app.querySelector(".hero");
+    let x0 = null;
+    hero.addEventListener("pointerdown", (e) => { x0 = e.clientX; });
+    hero.addEventListener("pointerup", (e) => {
+      if (x0 === null) return;
+      const dx = e.clientX - x0; x0 = null;
+      if (Math.abs(dx) < 30) return;
+      const actual = [...botones].findIndex((b) => b.getAttribute("aria-pressed") === "true");
+      const sig = Math.max(0, Math.min(3, actual + (dx < 0 ? 1 : -1)));
+      if (sig !== actual) botones[sig].click();
+    });
+  });
+})();
+</script>

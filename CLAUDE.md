@@ -129,8 +129,120 @@ Hoy el PDF se genera en el teléfono y se comparte con el menú de Android; **no
 ### 9. Texto honesto sobre el bloqueo
 En la pantalla **Seguridad**, decir con claridad que el PIN y la huella bloquean la pantalla, y que los datos están cifrados aparte con una clave del teléfono (sin tecnicismos de más).
 
-### 10. Cerrar la versión
-Cuando 1–9 estén hechas y probadas: subir a `versionCode = 7`, `versionName = "1.3.3"` y agregar la sección 1.3.3 en `docs/CAMBIOS.md` describiendo estos cambios.
+### 10. Sacar "base SQL / NoSQL" y nombres de servicios de TODAS las versiones
+Hoy "Probar conexión" (`SyncManager.diagnosticar`) muestra "Base SQL (Supabase)" y "Base NoSQL (Firestore)", y `ExplicacionError.explicar` dice "Supabase: …" / "Firestore: …". Se ocultó solo en release, pero el usuario prueba con el APK debug y lo sigue viendo: **no sirve**. Cambiar las etiquetas a lenguaje simple en todas las versiones ("Registros", "Uso de la app", "Conexión") y dejar el nombre técnico solo dentro de "Ver detalle del error".
+
+### 11. Confirmación de correo que no lleve al panel
+Hoy el enlace del correo de confirmación de Supabase abre el panel del equipo (la Site URL). Hacer:
+- Una página `dashboard/confirmado.html`: "✓ Correo confirmado. Vuelve a la app", con botón "Abrir la app" (deep link `inacaphealth://confirmado`, con su `intent-filter` en el manifest).
+- Pasar esa dirección como `redirect_to` al pedir el cambio/alta de correo (`PUT /auth/v1/user` y el registro). Agregarla también en Supabase → Authentication → URL Configuration → Redirect URLs (lo hace el usuario; déjalo escrito en `docs/DESPLIEGUE_Y_SEGURIDAD.md`).
+- Al volver a la app (onResume), revisar sola si el correo ya se confirmó y terminar el registro; el botón "Ya confirmé" queda solo como respaldo.
+- La verificación ya funciona (sin abrir el correo, "Ya confirmé" dice que no se ve la confirmación). Confirmar que *Confirm email* siga activado en Supabase.
+
+### 12. Cuentas: todas nacen como alumno; el equipo se pre-registra
+- Quitar de la app "crear cuenta del equipo". Toda cuenta creada desde la app es **alumno**.
+- Nueva tabla en el servidor (p. ej. `personal_invitado`: correo, rol, nombre_visible, creado_por) que llena el **administrador** desde el panel (pestaña Equipo).
+- Cuando una cuenta con ese correo inicia sesión o se crea, el servidor le asigna el rol automáticamente **solo si el correo está confirmado** (`email_confirmed_at` no nulo). Sin esto, alguien podría registrarse con el correo de otra persona sin poder abrirlo y quedarse con su rol.
+- Pruebas SQL: correo pre-registrado + confirmado → rol; no confirmado → sin rol; no pre-registrado → alumno.
+
+### 13. Una sola sesión activa por cuenta
+Al iniciar sesión en un teléfono nuevo, la sesión del teléfono anterior se cierra (decisión del usuario: opción "a"). Implementar en el servidor (p. ej. registrar la sesión vigente por usuario y revocar las anteriores al iniciar sesión) y en la app (si el servidor rechaza la sesión, volver a la pantalla de inicio de sesión con el aviso "Iniciaste sesión en otro teléfono").
+
+### 14. Pedir los datos del perfil justo después de crear la cuenta
+- Al terminar de crear la cuenta, ir directo a *Mis datos* con botón **Omitir**.
+- Si omite (o entró con una cuenta existente sin datos), mostrar en Inicio un aviso: "Completa tus datos para recomendaciones personalizadas → Completar", que desaparece al completarlos.
+
+### 15. Agua en vasos y litros, con recomendación personalizada
+- La meta ya se calcula con el peso (`SaludLogic.metaAguaMl`: 35 ml/kg + extra por actividad); el problema es cómo se muestra.
+- Mostrar en **vasos (250 ml) y litros**: "Llevas 3 de 8 vasos (0,75 de 2 L)". Botones "+ 1 vaso" / "Quitar 1 vaso". Nada de "ml" en pantalla.
+- Al calcular el IMC (peso y estatura), mostrar la recomendación: "Con tu peso te recomendamos unos 2,3 L al día (9 vasos)" y actualizar la meta.
+- Sin peso registrado: meta general y sugerencia de completar los datos.
+
+### 16. Test SCOFF: solo Sí y No
+- Hoy hay 4 botones (Sí, No, Atrás, Siguiente) y confunde.
+- Dejar **Sí** y **No** grandes y bien separados; al elegir uno aparece **Siguiente** ("Ver resultado" en la última).
+- Un enlace de texto chico, separado de los botones, para "Volver a la pregunta anterior". Nada amontonado.
+
+### 17. Pantalla negra al apretar atrás muchas veces
+Al retroceder más allá de la primera pantalla el `NavHost` queda sin destino y se ve negro. Desde Inicio (raíz), atrás debe cerrar la app normalmente. Va junto con la tarea 2.
+
+### 18. Historial por mes, semana a semana
+- El mes actual se muestra por semanas (semana 1, 2, 3, 4…). Al empezar el mes siguiente, la vista parte de nuevo desde la semana 1.
+- Flechas **‹ mes anterior · mes siguiente ›** para ver los meses pasados.
+- Aplica a agua, pasos, pulso e IMC.
+
+### 18b. Orientación: recomendar apoyo profesional sin bloquear la consulta
+**Problema:** en `OrientacionScreen.kt` → `NuevaConsulta`, si el último SCOFF tiene alerta (`requiereDerivacion`), la pantalla hace `return@Column` y solo deja "Ir a Apoyo profesional": no se puede hacer ninguna consulta general, para siempre, aunque el texto diga "tú decides".
+**Qué hacer:**
+- Mostrar la tarjeta de recomendación arriba (con su botón), y **debajo** un botón "Seguir con mi consulta general" que muestra el formulario normal.
+- La alerta solo cuenta si el SCOFF es **reciente** (últimos 30 días).
+- Mantener `SenalesDeAlerta` mientras escribe (aviso, no bloqueo).
+- Esto cambia el criterio de aceptación de **HU-13** de "bloquear" a "recomendar sin bloquear": actualizarlo en `docs/Product_Backlog_INACAP_Health.xlsx` y en `docs/CAMBIOS.md`.
+
+### 18c. Sede del alumno (para escalar a más regiones)
+- Agregar a *Mis datos* (y al paso de completar datos de la tarea 14) el campo **Sede INACAP**, una lista. Por ahora solo **Valdivia**; se deja preparado para agregar más sedes sin cambiar código (lista en un solo lugar).
+- **No** usar GPS ni pedir permiso de ubicación; no pedir dirección.
+- A la nube va solo la sede (como hoy `rango_edad`), y solo si comparte datos anonimizados: columna `sede` en `usuarios` (`schema.sql`, con `CHECK` de valores permitidos o tabla `sedes`), y en `Anonimizacion.usuario`.
+- Panel: estadísticas por sede, **ocultando las sedes con menos de 5 personas** (para que no se pueda identificar a nadie).
+- Mencionar la sede en `legal/TextosLegales.kt` (datos que se comparten) y regenerar `docs/TERMINOS_Y_CONDICIONES.md`.
+- Si el usuario prefiere comuna/región de residencia en vez de sede, cambiar solo la lista y el texto.
+
+### 18d. Antecedentes de salud para quien atiende
+Decisión del usuario: quien atiende debe conocer los antecedentes (p. ej. hipertensión, alergia al paracetamol).
+- Compartir patologías, alergias y medicamentos es **obligatorio para hacer cualquier consulta** (orientación y apoyo). **No** es obligatorio para usar el resto de la app (calculadoras, pasos, pulso, historial).
+- Antes de la primera consulta, pantalla que diga: **"Necesitamos saber más de ti para darte la mejor atención"**, con los campos (o lo que ya tenga en *Mis datos*) y un botón para aceptar compartirlos. Sin aceptar, no se puede enviar la consulta, pero se explica por qué.
+- Ojo: hoy los cifra la clave de Bienestar, así que solo Bienestar los lee. Quién más debe leerlos (por ejemplo, quien responde en orientación) depende de la definición de roles pendiente; mientras tanto, cifrar para Bienestar.
+- Se envían **cifrados de extremo a extremo** con la clave pública de Bienestar (igual que `contacto_cifrado` de las derivaciones, `CifradoE2E.kt`). Ni la base ni los administradores los leen. **No** se usan para estadísticas.
+- Se suben **al pedir atención y cada vez que el alumno los edita** (no cada 5 minutos: Android no permite menos de 15 min en segundo plano, gasta batería y casi nunca cambian).
+- Al eliminar la cuenta o revocar, se borran.
+- Cambiar el aviso "nunca se suben" en onboarding, Privacidad y `TextosLegales.kt` por: "Tus antecedentes de salud se comparten cifrados solo con el equipo que te atiende, cuando pides atención. Nunca se venden, publican ni usan para estadísticas." Subir la versión de los términos (la app pedirá aceptar de nuevo).
+- **Regla para el equipo** (en las instrucciones del modo equipo y en los términos): los estudiantes de medicina **no indican ni sugieren medicamentos** por chat; los antecedentes sirven para orientar con seguridad y para saber cuándo derivar a un médico.
+
+### 18e. Rediseño visual aprobado: rojo y blanco INACAP + hero con parallax y gradient mesh
+Maqueta: `docs/maqueta-inicio.html` (ábrela en el navegador; los íconos y gatitos son interactivos). Se descartó una versión neumórfica gris porque perdía la identidad de INACAP. Reemplaza el tema actual en `ui/theme/` y las pantallas principales.
+- **El rojo INACAP manda:** banda roja arriba con "INACAP Health", el saludo grande ("Hola, Ana") y la fecha. Fondo **blanco/gris muy claro**, no gris medio. Botón principal y pestaña activa en **rojo sólido**.
+- **Hero de Inicio dentro de la banda roja**, como tarjeta propia (esquinas ~20 dp, sombra hacia abajo y un borde de luz blanco sutil arriba) para que se despegue de la banda.
+  - Fondo del hero: **gradient mesh** (varios degradados radiales que se funden) anclado en el rojo INACAP, con una mezcla distinta por dato: agua = rojo + toque azul; pasos = rojo + naranjo/dorado; pulso = rojo + magenta; IMC = rojo + verde azulado. En Compose: varios `Brush.radialGradient` superpuestos en un `Canvas`/`drawBehind`.
+  - **Parallax:** tres capas (malla de fondo con círculos blancos translúcidos, una ola/forma blanca translúcida propia de cada dato, y el dato grande al frente en blanco). Debajo de la banda, una fila de íconos Agua · Pasos · Pulso · IMC. Al elegir uno (o deslizar el hero), las capas avanzan a ese dato con **distinto retraso** (fondo el más lento, frente el más rápido). `HorizontalPager` con capas desplazadas según `currentPageOffsetFraction`, o `animateFloatAsState` con distintos `delayMillis`.
+  - **Intensidad ajustable:** al usuario el hero le pareció **que destaca demasiado** y lo va a evaluar en la app. Deja la intensidad de la malla, la sombra y el tamaño del hero en **constantes/tokens en un solo lugar** para poder bajarlas fácil. Parte con una versión más suave que la maqueta (menos saturación y sombra) y muéstrasela.
+  - El color propio de cada dato queda solo como un **punto chico** junto a su nombre; ya no es protagonista.
+- **Relieve suave** (toque neumórfico) solo en tarjetas e íconos blancos: sombra doble muy sutil. Ícono elegido hundido y en rojo. Esquinas ~16 dp, nada inflado.
+- El botón bajo los íconos cambia según el dato: "+ 1 vaso", "Ver mis pasos", "Medir pulso", "Calcular IMC". Botón rojo sólido con un borde inferior más oscuro (leve relieve).
+- Barra de pestañas inferior flotante, blanca; la pestaña activa con fondo rojo y texto blanco.
+- **El test SCOFF no va en Inicio:** queda en Bienestar (tarea 18f). En Inicio va el check-in de ánimo (tarea 18g).
+- **Modo noche:** banda roja algo más oscura, fondo casi negro, malla oscurecida un poco y sombras más marcadas. Revisarlo en el teléfono.
+- **Accesibilidad:** texto blanco sobre rojo con buen contraste; respetar "quitar animaciones" del sistema (sin movimiento).
+- **Sin morado en las letras:** al usuario no le gustaron las A en morado (no pegan con el rojo INACAP). No pintes letras en morado. El usuario dirá más adelante dónde usar el morado.
+- Con este rediseño, el agua se muestra en vasos y litros (tarea 15) y el SCOFF con solo Sí/No (tarea 16).
+
+### 18f. Cuestionarios en Bienestar
+Decisión del usuario: agregarlos todos, **PHQ-9 incluido** (solo en Bienestar). Todos de uso libre y validados en español. Van en una sección **"Cuestionarios"** dentro de Bienestar (nunca en Inicio), con preguntas Sí/No u opciones grandes, una por pantalla, como el SCOFF nuevo.
+- **SCOFF** (ya existe, 5): trastornos alimentarios.
+- **WHO-5** (5): bienestar general.
+- **PHQ-2** (2): ánimo. Si sale en alerta (≥3), ofrecer el PHQ-9 completo y recomendar hablar con Bienestar.
+- **PHQ-9** (9): solo en Bienestar (decisión del usuario, 2026-11-23). **Protocolo mínimo obligatorio** por la pregunta 9 (pensamientos de muerte o de hacerse daño): si la respuesta a esa pregunta es distinta de "Nunca", **sin importar el puntaje total**, mostrar de inmediato una pantalla de ayuda con la línea de prevención del suicidio ***4141** (MINSAL, gratuita, 24 h), **Salud Responde 600 360 7777** y emergencias **131**, con botones para llamar, más el botón de pedir atención a Bienestar. Esa pantalla no se puede saltar sin tocar "Entiendo". El protocolo de seguimiento del equipo (quién contacta, en cuánto tiempo) lo define el docente supervisor; dejarlo anotado como pendiente en `docs/`.
+- **GAD-2 → GAD-7**: ansiedad; el GAD-7 completo solo si el GAD-2 sale en alerta (≥3).
+- **PSS-10** (10): estrés percibido.
+- **AUDIT-C** (3): consumo de alcohol.
+- **IPAQ corto** (7): actividad física.
+- No usar MBI ni ISI (requieren licencia).
+- Resultados: lenguaje simple, sin diagnóstico ("esto no es un diagnóstico"), y cuando salga alerta, recomendación de Bienestar con el botón de pedir atención. Las respuestas individuales se quedan en el teléfono (como el SCOFF); a la nube solo va el puntaje, y solo si comparte datos anonimizados. Agregar cada cuestionario a `TextosLegales.kt` y a la tabla correspondiente del servidor.
+- Verificar el texto exacto de cada pregunta y los puntos de corte en la versión validada en español antes de implementar (no inventarlos).
+
+### 18g. Check-in diario "¿Cómo te sientes hoy?" en Inicio
+- Reemplaza al SCOFF en Inicio. Un toque al día con **5 gatitos**: 😿 Muy mal · 🙀 Mal · 😺 Normal · 😸 Bien · 😻 Muy bien.
+- Título "¿Cómo te sientes hoy?" y la respuesta ("Hoy te sientes **Bien**"); gatito elegido hundido con un borde de color. El color de ese acento está **por decidir** (el usuario dirá dónde va el morado); mientras tanto, déjalo como un token que se cambie en un solo lugar.
+- Se guarda en el teléfono (nueva tabla en Room) y se ve en el historial. Si marca "Mal" o "Muy mal" 3 días seguidos, sugerir con suavidad un cuestionario o hablar con Bienestar.
+- Los emojis se ven distinto según la marca del teléfono; si se quiere el mismo dibujo en todos, usar ilustraciones propias de gatitos en vez de emojis.
+
+## Decisiones pendientes (NO implementar hasta que el usuario confirme)
+- **Prioridad del usuario:** primero arreglar los problemas de la app (tareas 1–18g). Los roles se definen después.
+- **Dónde va el morado:** el usuario lo decidirá viéndolo en la app. Por ahora no se pinta ninguna letra en morado.
+- **Roles nuevos:** propuesta en discusión — *Estudiante de medicina* (atiende por chat; hoy rol `bienestar`), *Profesional supervisor* (titulado; hoy "tutor": ve todos los chats, supervisa y puede intervenir), *Administrador*. Falta confirmar si sigue el docente supervisor y si sigue la orientación entre pares con estudiantes de Nutrición. Implica cambiar la RLS de los chats de atención para que el supervisor pueda leerlos, y avisarlo en el consentimiento.
+- **Ánimo (confirmado 2026-11-23):** en Inicio va el check-in de gatitos; el PHQ-2 y el PHQ-9 van en Bienestar → Cuestionarios (tarea 18f).
+
+### 19. Cerrar la versión
+Cuando las tareas 1–18g estén hechas y probadas: subir a `versionCode = 7`, `versionName = "1.3.3"` y agregar la sección 1.3.3 en `docs/CAMBIOS.md` describiendo estos cambios.
 
 ## Fuera de alcance por ahora (no hacer todavía)
 - **Compilación release** reducida/ofuscada (R8) + firma: necesita reglas para SQLCipher/Health Connect/WorkManager y pruebas en teléfono real. Dejar para "preparar publicación".
