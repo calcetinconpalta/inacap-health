@@ -84,7 +84,7 @@ fun DerivacionScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Apoyo profesional") },
+                title = { Text("Apoyo de Bienestar") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -112,11 +112,11 @@ fun DerivacionScreen(
                 // Texto introductorio
                 if (NubeConfig.sqlConfigurado) {
                     OutlinedButton(onClick = onVerMensajes, modifier = Modifier.fillMaxWidth()) {
-                        Text("Ver mensajes de profesionales de Bienestar", color = MaterialTheme.colorScheme.onSurface)
+                        Text("Ver mensajes del equipo de Bienestar", color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
                 Text(
-                    text = "Puedes solicitar apoyo profesional de forma confidencial. Tú decides si quieres hacerlo.",
+                    text = "Puedes pedir apoyo al equipo de Bienestar de forma confidencial. Tú decides si quieres hacerlo.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

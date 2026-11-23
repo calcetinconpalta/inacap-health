@@ -14,7 +14,7 @@ Responsable del tratamiento de datos: equipo del proyecto INACAP Health. Contact
 
 ### 2. Qué es y qué no es la app
 
-Es una herramienta de autocuidado y orientación: calculadora de IMC e hidratación, pasos diarios, pulso con la cámara o con tu reloj, cuestionario SCOFF de bienestar alimentario, recordatorios, contenido educativo, orientación entre pares, derivación y mensajes con profesionales de Bienestar Estudiantil.
+Es una herramienta de autocuidado y orientación: calculadora de IMC e hidratación, pasos diarios, pulso con la cámara o con tu reloj, cuestionario SCOFF de bienestar alimentario, recordatorios, contenido educativo, orientación entre pares, derivación y mensajes con el equipo de Bienestar Estudiantil (estudiantes de medicina en práctica, supervisados por docentes).
 
 NO entrega diagnósticos médicos ni nutricionales, NO reemplaza la consulta con un médico, nutricionista o psicólogo y NO es un servicio de urgencias. Los resultados son referencias generales (por ejemplo, los rangos de IMC de la OMS).
 
@@ -90,7 +90,7 @@ Para alojar estos datos usamos proveedores de servicios en la nube que pueden te
 
 • Orientación entre pares: tus mensajes se guardan con tu código anónimo y los leen el tutor par asignado y los docentes supervisores. Puedes borrar tus conversaciones cuando quieras.
 
-• Atención profesional: si un profesional de Bienestar responde tu solicitud, esa conversación solo la ven tú y ese profesional (no los tutores ni los docentes).
+• Atención de Bienestar: si alguien del equipo de Bienestar (estudiantes de medicina en práctica supervisada) responde tu solicitud, esa conversación solo la ven tú y esa persona (no los tutores ni los docentes).
 
 • Reloj por Bluetooth: la app lee el pulso que transmite tu reloj o banda directamente en el teléfono; solo se guarda si tocas "Guardar".
 

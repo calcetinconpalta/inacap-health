@@ -141,7 +141,7 @@ private fun AppNavContent(
 
     val bienestarItems = listOf(
         HubItem("Test SCOFF", "Cuestionario breve de autocuidado", Routes.SCOFF, true, Icons.Default.CheckCircle),
-        HubItem("Apoyo profesional", "Solicita atención confidencial", Routes.DERIVACION, true, Icons.Default.Call),
+        HubItem("Apoyo de Bienestar", "Pide atención confidencial", Routes.DERIVACION, true, Icons.Default.Call),
         HubItem("Aprende", "Nutrición y hábitos saludables", Routes.EDUCATIVO, true, Icons.Default.Info),
         HubItem("Orientación entre pares", "Conversa con un tutor par supervisado", Routes.ORIENTACION, true, Icons.Default.Email)
     )

@@ -17,7 +17,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
@@ -56,6 +59,9 @@ import com.inacap.health.equipo.ConversacionEquipo
 import com.inacap.health.equipo.DerivacionEquipo
 import com.inacap.health.equipo.EquipoRepositorio
 import com.inacap.health.equipo.MensajeEquipo
+import com.inacap.health.equipo.MonitoreoReglas
+import com.inacap.health.data.remote.ErrorNube
+import androidx.compose.foundation.layout.PaddingValues
 import com.inacap.health.equipo.RolEquipo
 import com.inacap.health.equipo.Supervision
 import com.inacap.health.ui.components.BarraSuperior
@@ -69,14 +75,29 @@ import kotlinx.coroutines.launch
 
 private val TEMAS = mapOf(
     "alimentacion" to "Alimentación", "hidratacion" to "Hidratación", "actividad" to "Actividad física",
-    "habitos" to "Hábitos y descanso", "otro" to "Otro", "apoyo_profesional" to "Atención profesional"
+    "habitos" to "Hábitos y descanso", "otro" to "Otro", "apoyo_profesional" to "Atención de Bienestar"
 )
 private val CANALES = mapOf("bienestar_presencial" to "Presencial", "bienestar_correo" to "Por correo", "cesfam" to "CESFAM")
 private val ESTADOS_DER = listOf("pendiente" to "Pendiente", "en_contacto" to "En contacto", "atendida" to "Atendida")
 
 private fun etiquetaEstudiante(id: String) = "Estudiante #" + id.take(6)
 
-/** App del equipo: Solicitudes · Chats · Cuenta. */
+/** Pestañas del modo equipo. Cada rol ve solo las suyas; los datos igual los filtra el servidor. */
+enum class PestanaEquipo(val etiqueta: String) {
+    SOLICITUDES("Solicitudes"), CHATS("Chats"), MONITOREO("Monitoreo"), BITACORA("Bitácora"),
+    RESUMEN("Resumen"), EQUIPO("Equipo"), SEGURIDAD("Seguridad"), CUENTA("Cuenta");
+
+    companion object {
+        fun de(rol: RolEquipo): List<PestanaEquipo> = when (rol) {
+            RolEquipo.TUTOR -> listOf(SOLICITUDES, CHATS, MONITOREO, CUENTA)
+            RolEquipo.PROFESIONAL -> listOf(SOLICITUDES, CHATS, CUENTA)
+            RolEquipo.DOCENTE -> listOf(SOLICITUDES, CHATS, BITACORA, CUENTA)
+            RolEquipo.ADMIN -> listOf(RESUMEN, EQUIPO, SEGURIDAD, CUENTA)
+        }
+    }
+}
+
+/** App del equipo: pestañas según el rol (ver [PestanaEquipo.de]). */
 @Composable
 fun EquipoApp(repo: EquipoRepositorio, onSalir: () -> Unit) {
     val rol = repo.rol ?: return
@@ -87,7 +108,10 @@ fun EquipoApp(repo: EquipoRepositorio, onSalir: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
+    val pestanas = PestanaEquipo.de(rol)
+
     suspend fun recargar() {
+        if (rol == RolEquipo.ADMIN) return   // el administrador no ve conversaciones: cada pestaña carga lo suyo
         try {
             convs = repo.conversaciones()
             if (rol == RolEquipo.PROFESIONAL) ders = repo.derivaciones()
@@ -132,20 +156,34 @@ fun EquipoApp(repo: EquipoRepositorio, onSalir: () -> Unit) {
                     selectedIconColor = MaterialTheme.colorScheme.primary, selectedTextColor = MaterialTheme.colorScheme.primary,
                     indicatorColor = MaterialTheme.colorScheme.primaryContainer
                 )
-                NavigationBarItem(pestana == 0, { pestana = 0 }, icon = {
-                    BadgedBox(badge = { if (pendientes > 0) Badge { Text("$pendientes") } }) { Icon(Icons.Default.Notifications, null) }
-                }, label = { Text("Solicitudes") }, colors = colores)
-                NavigationBarItem(pestana == 1, { pestana = 1 }, icon = { Icon(Icons.Default.Email, null) }, label = { Text("Chats") }, colors = colores)
-                NavigationBarItem(pestana == 2, { pestana = 2 }, icon = { Icon(Icons.Default.Person, null) }, label = { Text("Cuenta") }, colors = colores)
+                pestanas.forEachIndexed { i, p ->
+                    val icono = when (p) {
+                        PestanaEquipo.SOLICITUDES -> Icons.Default.Notifications
+                        PestanaEquipo.CHATS -> Icons.Default.Email
+                        PestanaEquipo.MONITOREO, PestanaEquipo.RESUMEN -> Icons.Default.Info
+                        PestanaEquipo.BITACORA, PestanaEquipo.EQUIPO -> Icons.AutoMirrored.Filled.List
+                        PestanaEquipo.SEGURIDAD -> Icons.Default.Lock
+                        PestanaEquipo.CUENTA -> Icons.Default.Person
+                    }
+                    NavigationBarItem(pestana == i, { pestana = i }, icon = {
+                        if (p == PestanaEquipo.SOLICITUDES) BadgedBox(badge = { if (pendientes > 0) Badge { Text("$pendientes") } }) { Icon(icono, null) }
+                        else Icon(icono, null)
+                    }, label = { Text(p.etiqueta, fontSize = 11.sp, maxLines = 1) }, colors = colores)
+                }
             }
         }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             error?.let { Text(it, color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, modifier = Modifier.padding(16.dp)) }
-            when (pestana) {
-                0 -> Solicitudes(repo, rol, convs, ders, onAbrir = { abierta = it }, onCambio = { scope.launch { recargar() } })
-                1 -> ListaChats(misChats, rol, onAbrir = { abierta = it })
-                else -> CuentaEquipo(repo, rol, onSalir)
+            when (pestanas.getOrElse(pestana) { PestanaEquipo.CUENTA }) {
+                PestanaEquipo.SOLICITUDES -> Solicitudes(repo, rol, convs, ders, onAbrir = { abierta = it }, onCambio = { scope.launch { recargar() } })
+                PestanaEquipo.CHATS -> ListaChats(misChats, rol, onAbrir = { abierta = it })
+                PestanaEquipo.MONITOREO -> MonitoreoTutor(repo, convs)
+                PestanaEquipo.BITACORA -> BitacoraGeneral(repo, onAbrir = { abierta = it })
+                PestanaEquipo.RESUMEN -> ResumenAdminVista(repo)
+                PestanaEquipo.EQUIPO -> EquipoVista(repo)
+                PestanaEquipo.SEGURIDAD -> SeguridadVista(repo)
+                PestanaEquipo.CUENTA -> CuentaEquipo(repo, rol, onSalir)
             }
         }
     }
@@ -198,7 +236,7 @@ private fun Solicitudes(
                 if (ders.isEmpty()) item { TextoSecundario("No hay solicitudes por ahora.") }
                 items(ders, key = { it.id }) { d ->
                     Tarjeta(titulo = "${d.codigo} · ${CANALES[d.canal] ?: d.canal}") {
-                        TextoSecundario(horaCorta(d.fecha) + if (d.conContacto) " · dejó datos de contacto (cifrados, se ven en el panel web)" else " · sin datos de contacto")
+                        TextoSecundario(horaCorta(d.fecha) + if (d.conContacto) " · dejó datos de contacto (cifrados: se descifran en el panel web con la clave de Bienestar)" else " · sin datos de contacto")
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             ESTADOS_DER.forEach { (k, n) ->
                                 FilterChip(
@@ -216,11 +254,7 @@ private fun Solicitudes(
                     }
                 }
             }
-            RolEquipo.ADMIN -> item {
-                Tarjeta(titulo = "Administración") {
-                    TextoSecundario("Las estadísticas, la gestión del equipo y la seguridad están por ahora en el panel web. Llegarán a la app en una próxima actualización.")
-                }
-            }
+            RolEquipo.ADMIN -> {}
         }
         mensaje?.let { m -> item { TextoSecundario(m) } }
     }
@@ -297,7 +331,7 @@ private fun ChatEquipo(repo: EquipoRepositorio, rol: RolEquipo, id: String, conv
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 when (rol) {
                     RolEquipo.TUTOR -> if (puedeEscribir) {
-                        AssistChip(onClick = { accion { repo.cambiarEstado(id, "derivada") } }, label = { Text("Derivar a profesional") })
+                        AssistChip(onClick = { accion { repo.cambiarEstado(id, "derivada") } }, label = { Text("Derivar a Bienestar") })
                         AssistChip(onClick = { accion { repo.cambiarEstado(id, "cerrada") } }, label = { Text("Cerrar") })
                     } else if (conv?.tutorId == null && estado == "abierta") {
                         AssistChip(onClick = { accion { repo.tomar(id) } }, label = { Text("Tomar consulta") })
@@ -336,7 +370,7 @@ private fun ChatEquipo(repo: EquipoRepositorio, rol: RolEquipo, id: String, conv
                 }
             } else {
                 Text(
-                    when (estado) { "cerrada" -> "Conversación cerrada."; "derivada" -> "Conversación derivada a apoyo profesional."; else -> "Toma la consulta para responder." },
+                    when (estado) { "cerrada" -> "Conversación cerrada."; "derivada" -> "Conversación derivada a Bienestar."; else -> "Toma la consulta para responder." },
                     color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth().padding(16.dp)
                 )
             }
@@ -388,3 +422,111 @@ private fun CuentaEquipo(repo: EquipoRepositorio, rol: RolEquipo, onSalir: () ->
     )
 }
 
+
+// ---------- Vistas por rol ----------
+
+/** Tutor: cifras sin nombres de las consultas que puede ver (lo filtra la RLS). */
+@Composable
+private fun MonitoreoTutor(repo: EquipoRepositorio, convs: List<ConversacionEquipo>) {
+    var autores by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    LaunchedEffect(convs) { runCatching { autores = repo.ultimosAutores() } }
+    val m = MonitoreoReglas.calcular(convs, autores)
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        item { Resumen(listOf("Abiertas" to m.abiertas, "Sin tutor" to m.sinTutor, "Esperan respuesta" to m.esperanRespuesta)) }
+        item { Titulo("Consultas abiertas por tema") }
+        if (m.porTema.isEmpty()) item { TextoSecundario("No hay consultas abiertas.") }
+        items(m.porTema.toList(), key = { it.first }) { (tema, n) -> Tarjeta { FilaValor(TEMAS[tema] ?: tema, "$n") } }
+        item {
+            TextoSecundario("Cifras sin nombres. «Esperan respuesta»: lo último lo escribió el estudiante. Revisa que ninguna quede mucho rato sin respuesta y deriva ante señales de riesgo.")
+        }
+    }
+}
+
+/** Docente: bitácora de supervisión de todas las conversaciones de orientación. */
+@Composable
+private fun BitacoraGeneral(repo: EquipoRepositorio, onAbrir: (String) -> Unit) = Cargando({ repo.bitacoraGeneral() }) { lista ->
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item { Titulo("Bitácora de supervisión (últimas 100)") }
+        if (lista.isEmpty()) item { TextoSecundario("Aún no hay registros.") }
+        items(lista) { b ->
+            val conv = b.conversacionId
+            Tarjeta(modifier = if (conv != null) Modifier.clickable { onAbrir(conv) } else Modifier, titulo = b.accion.replaceFirstChar { it.uppercase() }) {
+                TextoSecundario(horaCorta(b.fecha) + (conv?.let { " · " + etiquetaEstudiante(it) } ?: " · conversación eliminada"))
+                b.nota?.let { TextoSecundario(it) }
+            }
+        }
+    }
+}
+
+/** Carga un dato una vez al abrir la pestaña y muestra "Cargando…" o el error en lenguaje simple. */
+@Composable
+private fun <T : Any> Cargando(cargar: suspend () -> T, contenido: @Composable (T) -> Unit) {
+    var dato by remember { mutableStateOf<T?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        try { dato = cargar() } catch (e: Exception) { error = ExplicacionError.explicar(e.message, (e as? ErrorNube)?.codigo) }
+    }
+    val d = dato
+    val e = error
+    when {
+        e != null -> TextoSecundario(e, Modifier.padding(16.dp))
+        d == null -> TextoSecundario("Cargando…", Modifier.padding(16.dp))
+        else -> contenido(d)
+    }
+}
+
+/** Administrador: estadísticas agregadas (sin datos de personas). */
+@Composable
+private fun ResumenAdminVista(repo: EquipoRepositorio) = Cargando({ repo.resumenAdmin(30) }) { r ->
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Titulo("Últimos ${r.dias} días")
+        Resumen(listOf("Personas" to r.usuarios, "Nuevas" to r.nuevos, "Activas" to r.activos))
+        Tarjeta(titulo = "Orientación y apoyo") {
+            FilaValor("Consultas nuevas", "${r.consultas}")
+            FilaValor("Abiertas ahora", "${r.abiertas}")
+            FilaValor("Sin tutor", "${r.sinTutor}")
+            FilaValor("Solicitudes a Bienestar", "${r.derivaciones}")
+        }
+        Tarjeta(titulo = "Salud") {
+            FilaValor("Tests SCOFF", "${r.tests}")
+            FilaValor("Sugieren apoyo", "${r.sugierenApoyo}")
+            FilaValor("Pulso promedio", r.pulsoPromedio?.let { "$it lpm" } ?: "—")
+            FilaValor("Pasos por día (promedio)", "${r.pasosPromedio}")
+        }
+        TextoSecundario("Solo cifras agregadas de quienes comparten datos anonimizados. Los gráficos y el detalle están en el panel web.")
+    }
+}
+
+/** Administrador: quién está en el equipo y con qué rol. */
+@Composable
+private fun EquipoVista(repo: EquipoRepositorio) = Cargando({ repo.equipo() }) { lista ->
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item { Titulo("Activos por rol") }
+        items(RolEquipo.entries.toList(), key = { "r" + it.clave }) { r -> Tarjeta { FilaValor(r.nombre, "${lista.count { it.activo && it.rol == r.clave }}") } }
+        item { Titulo("Personas") }
+        items(lista, key = { it.userId }) { m ->
+            Tarjeta(titulo = m.nombre.ifBlank { m.email }) {
+                TextoSecundario("${RolEquipo.de(m.rol)?.nombre ?: m.rol} · ${if (m.activo) "Activo" else "Desactivado"}")
+                TextoSecundario(m.email)
+                m.ultimoAcceso?.let { TextoSecundario("Último acceso: " + horaCorta(it)) }
+            }
+        }
+        item { TextoSecundario("Para asignar o quitar roles usa el panel web (pestaña Equipo).") }
+    }
+}
+
+/** Administrador: resumen de seguridad (rechazos, IPs bloqueadas y auditoría). */
+@Composable
+private fun SeguridadVista(repo: EquipoRepositorio) = Cargando({ repo.seguridad() }) { s ->
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item { Resumen(listOf("Rechazos 24 h" to s.rechazos24h, "IPs bloqueadas" to s.ips.size)) }
+        if (s.ips.isNotEmpty()) item { Titulo("IPs bloqueadas") }
+        items(s.ips, key = { "ip" + it.ip }) { ip ->
+            Tarjeta(titulo = ip.ip) { TextoSecundario("Hasta ${horaCorta(ip.hasta)}" + (ip.motivo?.let { " · $it" } ?: "")) }
+        }
+        item { Titulo("Auditoría reciente") }
+        if (s.auditoria.isEmpty()) item { TextoSecundario("Sin eventos.") }
+        items(s.auditoria) { a -> TextoSecundario("${horaCorta(a.fecha)} · ${a.accion} · ${a.actor}") }
+        item { TextoSecundario("Para bloquear o desbloquear IPs usa el panel web (pestaña Seguridad).") }
+    }
+}

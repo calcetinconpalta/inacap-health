@@ -30,7 +30,7 @@ object TextosLegales {
         Seccion(
             "2. Qué es y qué no es la app",
             listOf(
-                "Es una herramienta de autocuidado y orientación: calculadora de IMC e hidratación, pasos diarios, pulso con la cámara o con tu reloj, cuestionario SCOFF de bienestar alimentario, recordatorios, contenido educativo, orientación entre pares, derivación y mensajes con profesionales de Bienestar Estudiantil.",
+                "Es una herramienta de autocuidado y orientación: calculadora de IMC e hidratación, pasos diarios, pulso con la cámara o con tu reloj, cuestionario SCOFF de bienestar alimentario, recordatorios, contenido educativo, orientación entre pares, derivación y mensajes con el equipo de Bienestar Estudiantil (estudiantes de medicina en práctica, supervisados por docentes).",
                 "NO entrega diagnósticos médicos ni nutricionales, NO reemplaza la consulta con un médico, nutricionista o psicólogo y NO es un servicio de urgencias. Los resultados son referencias generales (por ejemplo, los rangos de IMC de la OMS).",
                 "Si sientes que necesitas ayuda urgente, acude a un servicio de urgencia o llama a Salud Responde: 600 360 7777."
             )
@@ -106,7 +106,7 @@ object TextosLegales {
             listOf(
                 "• Derivación con contacto: si pides que Bienestar Estudiantil te contacte, tu nombre, medio de contacto y mensaje se cifran en tu teléfono con la clave de Bienestar (cifrado de extremo a extremo). Solo ese equipo puede leerlos; ni los servidores ni los administradores pueden.",
                 "• Orientación entre pares: tus mensajes se guardan con tu código anónimo y los leen el tutor par asignado y los docentes supervisores. Puedes borrar tus conversaciones cuando quieras.",
-                "• Atención profesional: si un profesional de Bienestar responde tu solicitud, esa conversación solo la ven tú y ese profesional (no los tutores ni los docentes).",
+                "• Atención de Bienestar: si alguien del equipo de Bienestar (estudiantes de medicina en práctica supervisada) responde tu solicitud, esa conversación solo la ven tú y esa persona (no los tutores ni los docentes).",
                 "• Reloj por Bluetooth: la app lee el pulso que transmite tu reloj o banda directamente en el teléfono; solo se guarda si tocas \"Guardar\".",
                 "• Health Connect: si lo vinculas, la app solo LEE tus pasos y frecuencia cardíaca; nunca escribe ni borra nada allí. Puedes desvincularlo en cualquier momento.",
                 "• Resumen PDF: se genera en tu teléfono solo cuando lo pides y tú decides con quién compartirlo.",

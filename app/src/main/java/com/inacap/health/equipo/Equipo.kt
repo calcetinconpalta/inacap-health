@@ -19,7 +19,7 @@ import java.net.URLEncoder
 enum class RolEquipo(val clave: String, val nombre: String) {
     TUTOR("tutor", "Tutor par"),
     DOCENTE("docente", "Docente supervisor"),
-    PROFESIONAL("bienestar", "Profesional de salud"),
+    PROFESIONAL("bienestar", "Bienestar"),
     ADMIN("admin", "Administrador");
 
     companion object {
@@ -36,7 +36,64 @@ data class ConversacionEquipo(
 )
 data class MensajeEquipo(val id: String, val rol: String, val texto: String, val creadoEn: String)
 data class DerivacionEquipo(val id: String, val canal: String, val codigo: String, val fecha: String, val estado: String, val conContacto: Boolean)
-data class Supervision(val accion: String, val nota: String?, val fecha: String)
+data class Supervision(val accion: String, val nota: String?, val fecha: String, val conversacionId: String? = null)
+
+/** Cifras sin nombres para el monitoreo del tutor. */
+data class Monitoreo(val abiertas: Int, val sinTutor: Int, val esperanRespuesta: Int, val porTema: Map<String, Int>)
+
+data class MiembroEquipo(val userId: String, val email: String, val rol: String, val nombre: String, val activo: Boolean, val ultimoAcceso: String?)
+data class IpBloqueada(val ip: String, val hasta: String, val motivo: String?)
+data class EventoAuditoria(val fecha: String, val accion: String, val actor: String)
+data class Seguridad(val rechazos24h: Int, val ips: List<IpBloqueada>, val auditoria: List<EventoAuditoria>)
+
+/** Resumen para el administrador: solo cifras agregadas (las entrega dashboard_resumen). */
+data class ResumenAdmin(
+    val dias: Int, val usuarios: Int, val nuevos: Int, val activos: Int,
+    val consultas: Int, val abiertas: Int, val sinTutor: Int, val derivaciones: Int,
+    val tests: Int, val sugierenApoyo: Int, val pulsoPromedio: Int?, val pasosPromedio: Int
+)
+
+object MonitoreoReglas {
+    /**
+     * [ultimoAutor]: rol de quien escribió el último mensaje de cada conversación.
+     * Una consulta abierta "espera respuesta" si no tiene mensajes o si lo último lo escribió el estudiante.
+     */
+    fun calcular(convs: List<ConversacionEquipo>, ultimoAutor: Map<String, String>): Monitoreo {
+        val abiertas = convs.filter { it.tipo == "orientacion" && it.estado == "abierta" }
+        return Monitoreo(
+            abiertas = abiertas.size,
+            sinTutor = abiertas.count { it.tutorId == null },
+            esperanRespuesta = abiertas.count { (ultimoAutor[it.id] ?: "estudiante") == "estudiante" },
+            porTema = abiertas.groupingBy { it.tema }.eachCount().toSortedMap()
+        )
+    }
+
+    /** Lee la respuesta de dashboard_resumen. */
+    fun resumenDe(j: JSONObject): ResumenAdmin {
+        val u = j.optJSONObject("usuarios") ?: JSONObject()
+        val o = j.optJSONObject("orientacion") ?: JSONObject()
+        val s = j.optJSONObject("scoff") ?: JSONObject()
+        val p = j.optJSONObject("pulso") ?: JSONObject()
+        return ResumenAdmin(
+            dias = j.optInt("periodo_dias", 30), usuarios = u.optInt("total"), nuevos = u.optInt("nuevos"), activos = u.optInt("activos"),
+            consultas = o.optInt("conversaciones"), abiertas = o.optInt("abiertas"), sinTutor = o.optInt("sin_tutor"),
+            derivaciones = j.optJSONObject("derivaciones")?.optInt("total") ?: 0,
+            tests = s.optInt("tests"), sugierenApoyo = s.optInt("sugiere_derivacion"),
+            pulsoPromedio = if (p.isNull("promedio")) null else p.optInt("promedio"),
+            pasosPromedio = j.optJSONObject("pasos")?.optInt("promedio_diario") ?: 0
+        )
+    }
+
+    fun seguridadDe(j: JSONObject): Seguridad {
+        val ips = j.optJSONArray("ips_bloqueadas") ?: JSONArray()
+        val aud = j.optJSONArray("auditoria") ?: JSONArray()
+        return Seguridad(
+            j.optInt("rechazos_24h"),
+            (0 until ips.length()).map { i -> ips.getJSONObject(i).let { IpBloqueada(it.optString("ip"), it.optString("hasta"), it.optString("motivo").takeIf { m -> m.isNotBlank() && m != "null" }) } },
+            (0 until aud.length()).map { i -> aud.getJSONObject(i).let { EventoAuditoria(it.optString("fecha"), it.optString("accion"), it.optString("actor", "Sistema")) } }
+        )
+    }
+}
 
 /** Reglas de la sesión del equipo (lógica pura). */
 object SesionEquipoReglas {
@@ -195,6 +252,37 @@ class EquipoRepositorio(context: Context, syncInyectado: com.inacap.health.data.
     suspend fun bitacora(id: String): List<Supervision> = withContext(Dispatchers.IO) {
         val a = sql().seleccionar("supervision", "select=accion,nota,creada_en&conversacion_id=eq.${enc(id)}&order=creada_en.asc")
         (0 until a.length()).map { i -> a.getJSONObject(i).let { Supervision(it.getString("accion"), it.optString("nota").takeIf { n -> n.isNotBlank() && n != "null" }, it.getString("creada_en")) } }
+    }
+
+    /** Rol del último mensaje de cada conversación visible (la RLS limita a las que le tocan). */
+    suspend fun ultimosAutores(): Map<String, String> = withContext(Dispatchers.IO) {
+        val a = sql().seleccionar("mensajes", "select=conversacion_id,rol_autor&order=creado_en.desc&limit=1000")
+        buildMap { for (i in 0 until a.length()) a.getJSONObject(i).let { putIfAbsent(it.getString("conversacion_id"), it.getString("rol_autor")) } }
+    }
+
+    /** Bitácora completa de supervisión (solo docentes y administradores, lo decide la RLS). */
+    suspend fun bitacoraGeneral(): List<Supervision> = withContext(Dispatchers.IO) {
+        val a = sql().seleccionar("supervision", "select=conversacion_id,accion,nota,creada_en&order=creada_en.desc&limit=100")
+        (0 until a.length()).map { i -> a.getJSONObject(i).let {
+            Supervision(it.getString("accion"), it.optString("nota").takeIf { n -> n.isNotBlank() && n != "null" }, it.getString("creada_en"),
+                it.optString("conversacion_id").takeIf { c -> c.isNotBlank() && c != "null" })
+        } }
+    }
+
+    suspend fun resumenAdmin(dias: Int = 30): ResumenAdmin = withContext(Dispatchers.IO) {
+        MonitoreoReglas.resumenDe(JSONObject(sql().rpc("dashboard_resumen", JSONObject().put("dias", dias))))
+    }
+
+    suspend fun equipo(): List<MiembroEquipo> = withContext(Dispatchers.IO) {
+        val a = JSONArray(sql().rpc("listar_equipo"))
+        (0 until a.length()).map { i -> a.getJSONObject(i).let {
+            MiembroEquipo(it.getString("user_id"), it.optString("email"), it.optString("rol"), it.optString("nombre_visible"),
+                it.optBoolean("activo"), it.optString("ultimo_acceso").takeIf { f -> f.isNotBlank() && f != "null" })
+        } }
+    }
+
+    suspend fun seguridad(): Seguridad = withContext(Dispatchers.IO) {
+        MonitoreoReglas.seguridadDe(JSONObject(sql().rpc("resumen_seguridad")))
     }
 
     suspend fun derivaciones(): List<DerivacionEquipo> = withContext(Dispatchers.IO) {

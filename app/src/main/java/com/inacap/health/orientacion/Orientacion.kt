@@ -20,7 +20,7 @@ object Temas {
         "habitos" to "Hábitos y descanso",
         "otro" to "Otro"
     )
-    private val TODOS_CON_ATENCION = TODOS + ("apoyo_profesional" to "Atención profesional")
+    private val TODOS_CON_ATENCION = TODOS + ("apoyo_profesional" to "Atención de Bienestar")
     fun nombre(clave: String) = TODOS_CON_ATENCION.firstOrNull { it.first == clave }?.second ?: clave
 }
 

@@ -226,10 +226,10 @@ private fun Lista(vm: OrientacionViewModel, soloAtencion: Boolean, onAbrir: (Str
         if (!soloAtencion) Button(onClick = onNueva, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
             Text("Nueva consulta", fontWeight = FontWeight.Bold)
         }
-        if (convs.isEmpty()) TextoSecundario(if (soloAtencion) "Aún no hay mensajes. Cuando un profesional de Bienestar responda tu solicitud, lo verás aquí." else "Aún no tienes conversaciones.")
+        if (convs.isEmpty()) TextoSecundario(if (soloAtencion) "Aún no hay mensajes. Cuando alguien del equipo de Bienestar responda tu solicitud, lo verás aquí." else "Aún no tienes conversaciones.")
         convs.forEach { c ->
             Tarjeta(Modifier.clickable { onAbrir(c.id) }, Temas.nombre(c.tema)) {
-                TextoSecundario(when (c.estado) { "abierta" -> "Abierta"; "derivada" -> "Derivada a un profesional"; else -> "Cerrada" })
+                TextoSecundario(when (c.estado) { "abierta" -> "Abierta"; "derivada" -> "Derivada a Bienestar"; else -> "Cerrada" })
             }
         }
         if (convs.isNotEmpty() && !soloAtencion) TextButton(onClick = { confirmar = true }) { Text("Borrar todas mis conversaciones", color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -254,7 +254,7 @@ private fun NuevaConsulta(vm: OrientacionViewModel, onDerivacion: () -> Unit, on
             // Criterio de aceptación HU-13: los casos con señales de TCA no se atienden entre pares.
             Tarjeta(titulo = "Te recomendamos apoyo profesional") {
                 TextoSecundario("Por tu último resultado del cuestionario de bienestar alimentario, lo mejor es conversar con un profesional. Es confidencial y tú decides.")
-                Button(onClick = onDerivacion, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) { Text("Ir a Apoyo profesional") }
+                Button(onClick = onDerivacion, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) { Text("Ir a Apoyo de Bienestar") }
             }
             return@Column
         }
@@ -283,8 +283,8 @@ private fun ChipTema(texto: String, sel: Boolean, onClick: () -> Unit) = FilterC
 @Composable
 private fun AvisoAyuda(onDerivacion: () -> Unit) {
     Tarjeta(titulo = "No estás solo/a") {
-        TextoSecundario("Si lo que sientes es urgente, llama a Salud Responde 600 360 7777 o a la línea *4141 (prevención del suicidio, gratuita y 24 horas). También puedes pedir apoyo profesional confidencial.")
-        OutlinedButton(onClick = onDerivacion) { Text("Apoyo profesional", color = MaterialTheme.colorScheme.onSurface) }
+        TextoSecundario("Si lo que sientes es urgente, llama a Salud Responde 600 360 7777 o a la línea *4141 (prevención del suicidio, gratuita y 24 horas). También puedes pedir apoyo confidencial al equipo de Bienestar.")
+        OutlinedButton(onClick = onDerivacion) { Text("Apoyo de Bienestar", color = MaterialTheme.colorScheme.onSurface) }
     }
 }
 
@@ -332,7 +332,7 @@ private fun Conversacion(vm: OrientacionViewModel, id: String, onDerivacion: () 
             TextButton(onClick = { vm.cerrar(id) }, modifier = Modifier.padding(start = 8.dp)) { Text("Cerrar conversación", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         } else {
             Text(
-                if (estado == "derivada") "Esta conversación se derivó a apoyo profesional." else "Conversación cerrada.",
+                if (estado == "derivada") "Esta conversación se derivó al equipo de Bienestar." else "Conversación cerrada.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth().background(BorderGray.copy(alpha = 0.3f)).padding(16.dp)
             )
         }
