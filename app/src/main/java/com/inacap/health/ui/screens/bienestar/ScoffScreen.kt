@@ -105,135 +105,19 @@ fun ScoffScreen(
                     )
                 }
 
-                // Indicador y Barra de progreso
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Pregunta ${uiState.preguntaActual + 1} de 5",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
-                    LinearProgressIndicator(
-                        progress = { (uiState.preguntaActual + 1) / 5f },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = BorderGray
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Texto de la pregunta
-                Text(
-                    text = PREGUNTAS_SCOFF[uiState.preguntaActual],
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-
-                // Botones grandes Sí / No
+                // Una pregunta por pantalla: solo Sí y No, grandes y separados; «Siguiente»
+                // aparece al elegir y «Volver a la pregunta anterior» es un enlace aparte.
                 val respuestaActual = uiState.respuestas[uiState.preguntaActual]
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Botón Sí
-                    val siSeleccionado = respuestaActual == true
-                    if (siSeleccionado) {
-                        Button(
-                            onClick = { viewModel.responder(true) },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(56.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary
-                            )
-                        ) {
-                            Text("Sí", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        }
-                    } else {
-                        OutlinedButton(
-                            onClick = { viewModel.responder(true) },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(56.dp),
-                            border = BorderStroke(1.dp, BorderGray)
-                        ) {
-                            Text("Sí", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
-                        }
-                    }
-
-                    // Botón No
-                    val noSeleccionado = respuestaActual == false
-                    if (noSeleccionado) {
-                        Button(
-                            onClick = { viewModel.responder(false) },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(56.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary
-                            )
-                        ) {
-                            Text("No", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        }
-                    } else {
-                        OutlinedButton(
-                            onClick = { viewModel.responder(false) },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(56.dp),
-                            border = BorderStroke(1.dp, BorderGray)
-                        ) {
-                            Text("No", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.weight(1f, fill = false))
-
-                // Controles Atrás y Siguiente / Ver resultado
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = {
-                            if (uiState.preguntaActual > 0) {
-                                viewModel.anterior()
-                            } else {
-                                onBack()
-                            }
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp),
-                        border = BorderStroke(1.dp, BorderGray)
-                    ) {
-                        Text("Atrás", color = MaterialTheme.colorScheme.onBackground)
-                    }
-
-                    Button(
-                        onClick = { viewModel.siguiente() },
-                        enabled = respuestaActual != null,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp)
-                    ) {
-                        Text(if (uiState.preguntaActual == 4) "Ver resultado" else "Siguiente")
-                    }
-                }
+                com.inacap.health.ui.components.PasoCuestionario(
+                    numero = uiState.preguntaActual + 1,
+                    total = 5,
+                    pregunta = PREGUNTAS_SCOFF[uiState.preguntaActual],
+                    opciones = listOf("Sí", "No"),
+                    elegida = when (respuestaActual) { true -> 0; false -> 1; null -> null },
+                    onElegir = { viewModel.responder(it == 0) },
+                    onSiguiente = { viewModel.siguiente() },
+                    onAnterior = if (uiState.preguntaActual > 0) ({ viewModel.anterior() }) else null
+                )
             } else {
                 // Pantalla de Resultado
                 Card(
