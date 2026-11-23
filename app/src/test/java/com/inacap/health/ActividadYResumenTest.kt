@@ -71,4 +71,16 @@ class ActividadYResumenTest {
         assertTrue(SenalesDeAlerta.hay("No quiero vivir así"))
         assertFalse(SenalesDeAlerta.hay("¿qué colación me recomiendan?"))
     }
+
+    @Test
+    fun orientacion_recomiendaSinBloquear_soloConScoffReciente() {
+        val dia = 24 * 60 * 60_000L
+        val ahora = 100 * dia
+        fun r(alerta: Boolean, haceDias: Int) = ResultadoScoff(puntaje = if (alerta) 3 else 0, respuestas = "", requiereDerivacion = alerta, createdAt = ahora - haceDias * dia)
+        val reciente = com.inacap.health.orientacion.RecomendacionApoyo
+        assertTrue(reciente.scoffReciente(listOf(r(true, 5)), ahora))
+        assertFalse("Más de 30 días: ya no cuenta", reciente.scoffReciente(listOf(r(true, 31)), ahora))
+        assertFalse("Cuenta el ÚLTIMO resultado", reciente.scoffReciente(listOf(r(false, 1), r(true, 3)), ahora))
+        assertFalse(reciente.scoffReciente(emptyList(), ahora))
+    }
 }

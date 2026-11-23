@@ -84,7 +84,7 @@ class OrientacionViewModel(application: Application) : AndroidViewModel(applicat
 
     init {
         viewModelScope.launch {
-            _scoffConAlerta.value = app.database.resultadoScoffDao().getAllUnaVez().lastOrNull()?.requiereDerivacion == true
+            _scoffConAlerta.value = com.inacap.health.orientacion.RecomendacionApoyo.scoffReciente(app.database.resultadoScoffDao().getAllUnaVez())
         }
     }
 
@@ -249,14 +249,20 @@ private fun NuevaConsulta(vm: OrientacionViewModel, onDerivacion: () -> Unit, on
     val cargando by vm.cargando.collectAsState()
     var tema by remember { mutableStateOf("alimentacion") }
     var texto by remember { mutableStateOf("") }
+    var seguirGeneral by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (alertaScoff) {
-            // Criterio de aceptación HU-13: los casos con señales de TCA no se atienden entre pares.
-            Tarjeta(titulo = "Te recomendamos apoyo profesional") {
-                TextoSecundario("Por tu último resultado del cuestionario de bienestar alimentario, lo mejor es conversar con un profesional. Es confidencial y tú decides.")
+            // HU-13 (1.3.3): se RECOMIENDA apoyo de Bienestar, pero la consulta general no se bloquea.
+            Tarjeta(titulo = "Te recomendamos hablar con Bienestar") {
+                TextoSecundario("Por tu resultado reciente del cuestionario de bienestar alimentario, te recomendamos conversar con el equipo de Bienestar. Es confidencial y tú decides.")
                 Button(onClick = onDerivacion, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) { Text("Ir a Apoyo de Bienestar") }
             }
-            return@Column
+            if (!seguirGeneral) {
+                OutlinedButton(onClick = { seguirGeneral = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Seguir con mi consulta general", color = MaterialTheme.colorScheme.onSurface)
+                }
+                return@Column
+            }
         }
         Text("¿Sobre qué quieres conversar?", fontWeight = FontWeight.SemiBold)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

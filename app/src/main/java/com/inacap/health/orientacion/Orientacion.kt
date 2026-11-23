@@ -24,6 +24,20 @@ object Temas {
     fun nombre(clave: String) = TODOS_CON_ATENCION.firstOrNull { it.first == clave }?.second ?: clave
 }
 
+/**
+ * HU-13 (1.3.3): con un SCOFF en alerta se RECOMIENDA apoyo de Bienestar, sin bloquear la consulta
+ * general. La alerta solo cuenta si el cuestionario es reciente.
+ */
+object RecomendacionApoyo {
+    const val DIAS_VIGENCIA = 30
+    private const val DIA_MS = 24 * 60 * 60_000L
+
+    fun scoffReciente(resultados: List<com.inacap.health.data.ResultadoScoff>, ahora: Long = System.currentTimeMillis()): Boolean {
+        val ultimo = resultados.maxByOrNull { it.createdAt } ?: return false
+        return ultimo.requiereDerivacion && ahora - ultimo.createdAt <= DIAS_VIGENCIA * DIA_MS
+    }
+}
+
 /** Detecta mensajes que merecen mostrar recursos de ayuda profesional (no bloquea el envío). */
 object SenalesDeAlerta {
     private val frases = listOf(
