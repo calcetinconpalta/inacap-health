@@ -29,6 +29,7 @@ class NubeFalsa : AutoCloseable {
     // --- Cuentas con correo (Supabase Auth) ---
     /** Si es true, agregar un correo exige confirmarlo con un enlace. */
     @Volatile var sesionReemplazada = false
+    @Volatile var sinColumnaSede = false
     @Volatile var confirmacionRequerida = false
     /** Correo ya confirmado de la cuenta actual ("" = anónima). */
     @Volatile var emailConfirmado = ""
@@ -68,6 +69,9 @@ class NubeFalsa : AutoCloseable {
             ex.requestMethod == "POST" && ruta.startsWith("/rest/v1/") && !ruta.startsWith("/rest/v1/rpc/") &&
                 synchronized(idsDeOtraSesion) { idsDeOtraSesion.any { cuerpo.contains("\"$it\"") } } ->
                 403 to """{"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy (USING expression) for table \"${ruta.substringAfterLast('/')}\""}"""
+            // Servidor con el esquema anterior a 1.3.3 (sin la columna "sede").
+            sinColumnaSede && ruta == "/rest/v1/usuarios" && cuerpo.contains("\"sede\"") ->
+                400 to """{"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'sede' column of 'usuarios' in the schema cache"}"""
             // Tarea 13: otro teléfono tomó la sesión de esta cuenta.
             sesionReemplazada && ruta.startsWith("/rest/v1/") && !ruta.endsWith("/rpc/registrar_sesion") ->
                 401 to """{"code":"INH401","details":null,"hint":null,"message":"SESION_REEMPLAZADA: iniciaste sesión en otro teléfono."}"""

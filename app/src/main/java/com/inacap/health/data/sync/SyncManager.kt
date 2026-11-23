@@ -409,7 +409,23 @@ class SyncManager(
         // Sin consentimiento de estadísticas, la fila no lleva rango de edad ni sexo.
         val perfil = if (sesion.compartirNube) db.perfilDao().getPerfilUnaVez() else null
         val fila = Anonimizacion.usuario(perfil, BuildConfig.VERSION_NAME).put("id", uid)
-        supabase.upsert(TABLA_USUARIOS, JSONArray().put(fila))
+        try {
+            supabase.upsert(TABLA_USUARIOS, JSONArray().put(fila))
+        } catch (e: ErrorNube) {
+            // Servidor aún sin la columna "sede" (schema.sql 1.3.3 no ejecutado): se envía sin ella para
+            // no trabar orientación ni la sincronización. La sede viajará cuando el servidor se actualice.
+            if (!ReglasServidor.faltaColumna(e.message, "sede")) throw e
+            Log.w(TAG, "El servidor no tiene la columna 'sede': ejecuta backend/supabase/schema.sql (1.3.3)")
+            fila.remove("sede")
+            supabase.upsert(TABLA_USUARIOS, JSONArray().put(fila))
+        }
+    }
+
+    /** Errores de un servidor con el esquema atrasado respecto de la app. */
+    object ReglasServidor {
+        /** PostgREST PGRST204: «Could not find the 'x' column of 'tabla' in the schema cache». */
+        fun faltaColumna(mensaje: String?, columna: String): Boolean =
+            mensaje != null && "PGRST204" in mensaje && "'$columna'" in mensaje
     }
 
     companion object {

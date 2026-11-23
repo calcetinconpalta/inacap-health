@@ -330,4 +330,13 @@ class SyncManagerTest {
         assertEquals(nuevoPasos, JSONArray(nube.de("POST", "/rest/v1/registros_biometricos").last().cuerpo).getJSONObject(0).getString("id"))
         assertEquals(0, pendientes())
     }
+
+    @Test
+    fun servidorSinColumnaSede_noTrabaOrientacionNiLaSincronizacion() = runBlocking {
+        nube.sinColumnaSede = true
+        sync.asegurarUsuarioRemoto()                       // lo que hace Orientación antes de abrir la consulta
+        val envios = nube.de("POST", "/rest/v1/usuarios")
+        assertEquals("Primero con sede, luego sin ella", 2, envios.size)
+        assertFalse(envios.last().cuerpo.contains("\"sede\""))
+    }
 }
