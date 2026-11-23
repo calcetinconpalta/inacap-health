@@ -93,9 +93,12 @@ class AnonimizacionTest {
 
     @Test
     fun evento_limitaPropiedades() {
-        val props = (1..15).associate { "k$it" to it }
+        val props = Anonimizacion.PROPS_PERMITIDAS.associateWith { "x".repeat(500) } + ("nombre" to "Ana")
         val e = Anonimizacion.evento("pantalla_vista", props, 0, "1.1", 34)
-        assertEquals(10, e.getJSONObject("props").length())
+        val p = e.getJSONObject("props")
+        assertEquals("Máximo 10 campos", 10, p.length())
+        assertEquals("Un campo desconocido nunca se envía", false, p.has("nombre"))
+        p.keys().forEach { assertEquals(Anonimizacion.LARGO_MAX_TEXTO, p.getString(it).length) }
         assertEquals("pantalla_vista", e.getString("tipo"))
     }
 }

@@ -46,6 +46,23 @@ test("rechaza campos no permitidos, faltantes o inválidos", async () => {
   await assertFails(db.doc("eventos/e6").set(evento("usuarioA", { ts: new Date(Date.now() + 3600e3) }))); // futuro
 });
 
+test("props: solo campos conocidos y valores de tamaño limitado", async () => {
+  const db = como("usuarioA");
+  // Eventos legítimos que manda la app hoy
+  await assertSucceeds(db.doc("eventos/ok1").set(evento("usuarioA", { tipo: "pantalla_vista", props: { pantalla: "inicio" } })));
+  await assertSucceeds(db.doc("eventos/ok2").set(evento("usuarioA", { tipo: "recordatorio_cambiado", props: { tipo: "agua", activo: true, intervalo: 60 } })));
+  await assertSucceeds(db.doc("eventos/ok3").set(evento("usuarioA", { tipo: "imc_calculado", props: { categoria: "normal", nivel_actividad: "moderado" } })));
+  await assertSucceeds(db.doc("eventos/ok4").set(evento("usuarioA", { tipo: "error_app", props: { detalle: "x".repeat(120) } })));
+  await assertSucceeds(db.doc("eventos/ok5").set(evento("usuarioA", { tipo: "terminos_aceptados", props: { version: 2, nube: false } })));
+  await assertSucceeds(db.doc("eventos/ok6").set(evento("usuarioA", { tipo: "app_abierta", props: {} })));
+  // Abusos
+  await assertFails(db.doc("eventos/m1").set(evento("usuarioA", { props: { detalle: "x".repeat(121) } })));   // texto enorme
+  await assertFails(db.doc("eventos/m2").set(evento("usuarioA", { props: { nombre: "Ana" } })));             // campo desconocido
+  await assertFails(db.doc("eventos/m3").set(evento("usuarioA", { props: { tema: ["a", "b"] } })));          // lista
+  await assertFails(db.doc("eventos/m4").set(evento("usuarioA", { props: { tema: { otro: "x".repeat(5000) } } }))); // mapa anidado
+  await assertFails(db.doc("eventos/m5").set(evento("usuarioA", { props: "texto" })));                       // props no es mapa
+});
+
 test("sin sesión no se puede escribir ni leer", async () => {
   const anon = env.unauthenticatedContext().firestore();
   await assertFails(anon.doc("eventos/e1").set(evento("usuarioA")));

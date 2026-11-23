@@ -105,6 +105,17 @@ object Anonimizacion {
     // ---------- Documento para la base NoSQL (Firestore) ----------
 
     /** Las props se limitan a 10 claves con valores simples (las reglas de Firestore lo exigen). */
+    /**
+     * Únicos nombres de campo que la app manda en los eventos de uso. firestore.rules acepta
+     * exactamente esta lista (EventosFirestoreTest lo verifica): si agregas un evento con un
+     * campo nuevo, agrégalo en los DOS lugares o esos eventos dejarán de llegar.
+     */
+    val PROPS_PERMITIDAS = setOf(
+        "ml", "calidad", "dias", "pantalla", "detalle", "tema", "canal", "requiere_derivacion",
+        "version", "nube", "tipo", "activo", "intervalo", "categoria", "nivel_actividad"
+    )
+    const val LARGO_MAX_TEXTO = 120
+
     fun evento(
         tipo: String,
         props: Map<String, Any?>,
@@ -113,13 +124,13 @@ object Anonimizacion {
         androidSdk: Int
     ): JSONObject {
         val p = JSONObject()
-        props.entries.take(10).forEach { (k, v) ->
+        props.entries.filter { it.key in PROPS_PERMITIDAS }.take(10).forEach { (k, v) ->
             p.put(
-                k.take(40),
+                k,
                 when (v) {
                     null -> JSONObject.NULL
                     is Number, is Boolean -> v
-                    else -> v.toString().take(120)
+                    else -> v.toString().take(LARGO_MAX_TEXTO)
                 }
             )
         }

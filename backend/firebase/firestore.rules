@@ -19,6 +19,24 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/administradores/$(request.auth.uid));
     }
 
+    // Valor de una prop: número, booleano, nulo o texto corto (la app recorta a 120).
+    function valorOk(p, k) {
+      return !(k in p) || p[k] == null || p[k] is number || p[k] is bool
+        || (p[k] is string && p[k].size() <= 120);
+    }
+
+    // Solo los nombres de campo que la app realmente envía (Anonimizacion.PROPS_PERMITIDAS)
+    // y cada valor con tamaño limitado, para que nadie con la clave pública gaste la cuota.
+    function propsValidas(p) {
+      return p is map && p.size() <= 10
+        && p.keys().hasOnly(['ml', 'calidad', 'dias', 'pantalla', 'detalle', 'tema', 'canal', 'requiere_derivacion',
+                             'version', 'nube', 'tipo', 'activo', 'intervalo', 'categoria', 'nivel_actividad'])
+        && valorOk(p, 'ml') && valorOk(p, 'calidad') && valorOk(p, 'dias') && valorOk(p, 'pantalla')
+        && valorOk(p, 'detalle') && valorOk(p, 'tema') && valorOk(p, 'canal') && valorOk(p, 'requiere_derivacion')
+        && valorOk(p, 'version') && valorOk(p, 'nube') && valorOk(p, 'tipo') && valorOk(p, 'activo')
+        && valorOk(p, 'intervalo') && valorOk(p, 'categoria') && valorOk(p, 'nivel_actividad');
+    }
+
     function eventoValido(d) {
       return d.keys().hasOnly(['uid', 'tipo', 'ts', 'props', 'version_app', 'android_sdk'])
         && d.keys().hasAll(['uid', 'tipo', 'ts'])
@@ -26,7 +44,7 @@ service cloud.firestore {
         && d.tipo is string && d.tipo.size() > 0 && d.tipo.size() <= 40
         && d.ts is timestamp
         && d.ts < request.time + duration.value(10, 'm')
-        && (!('props' in d) || (d.props is map && d.props.size() <= 10))
+        && (!('props' in d) || propsValidas(d.props))
         && (!('version_app' in d) || (d.version_app is string && d.version_app.size() <= 20))
         && (!('android_sdk' in d) || d.android_sdk is int);
     }
