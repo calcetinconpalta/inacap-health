@@ -1,5 +1,6 @@
 package com.inacap.health.ui.screens.equipo
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -110,6 +111,12 @@ fun EquipoApp(repo: EquipoRepositorio, onSalir: () -> Unit) {
         RolEquipo.DOCENTE -> convs.count { it.estado == "abierta" && it.tutorId == null }
         RolEquipo.PROFESIONAL -> ders.count { it.estado == "pendiente" }
         RolEquipo.ADMIN -> 0
+    }
+
+    // Botón atrás del teléfono: desde un chat vuelve a la lista; desde otra pestaña
+    // vuelve a Solicitudes; solo desde la raíz (Solicitudes) sale de la app.
+    BackHandler(enabled = abierta != null || pestana != 0) {
+        if (abierta != null) { abierta = null; scope.launch { recargar() } } else pestana = 0
     }
 
     abierta?.let { id ->

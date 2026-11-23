@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -164,6 +165,10 @@ fun OrientacionScreen(
     var nueva by remember { mutableStateOf(false) }
     val error by vm.error.collectAsState()
     val errorDetalle by vm.errorDetalle.collectAsState()
+
+    // Botón atrás del teléfono: desde un chat abierto vuelve a la lista, desde "nueva
+    // consulta" vuelve a la lista, y solo desde la lista sale de la pantalla.
+    BackHandler { when { abierta != null -> { abierta = null; vm.recargar() }; nueva -> nueva = false; else -> onBack() } }
 
     Scaffold(topBar = {
         BarraSuperior(if (soloAtencion) "Mensajes de Bienestar" else "Orientación entre pares", onBack = {
