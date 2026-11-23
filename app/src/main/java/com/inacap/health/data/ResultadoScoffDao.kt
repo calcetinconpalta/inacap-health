@@ -26,4 +26,8 @@ interface ResultadoScoffDao {
 
     @Query("DELETE FROM resultado_scoff")
     suspend fun deleteAll()
+
+    /** Cambia el id de sincronización (cuando el anterior quedó asociado a otra sesión en la nube). */
+    @Query("UPDATE resultado_scoff SET uuid = :nuevo WHERE uuid = :viejo")
+    suspend fun cambiarUuid(viejo: String, nuevo: String): Int
 }

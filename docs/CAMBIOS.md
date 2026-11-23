@@ -1,3 +1,21 @@
+# Cambios · versión 1.3.2
+
+- **«Aceptar todo» en los términos**: una casilla que marca (o desmarca) las tres de una vez. Indica que incluye compartir datos anónimos, que sigue siendo opcional y se puede desmarcar aparte. Prueba: `AceptarTodoTest`.
+- **El error real, en vez de «sin internet».** Antes cualquier falla sin respuesta del servidor (tiempo agotado, certificado rechazado, conexión bloqueada, corte a la mitad) se mostraba como «Sin conexión a internet». Ahora:
+  - Se explica según la causa real (DNS, tiempo de espera, certificado, conexión rechazada, corte, protocolo).
+  - **«Ver detalle del error»** en *Perfil → Cuenta*, *Privacidad y mis datos* y *Orientación* muestra el error exacto: la petición (por ejemplo `POST /rest/v1/usuarios`), el tipo de excepción y su mensaje o la respuesta del servidor, con botón **Copiar detalle** para reportarlo. En la versión publicada se ocultan las direcciones de los servidores; en el APK de prueba se ven completas.
+  - Errores de cuenta y de orientación incluyen el código o tipo de error.
+- **Corregido:** en Android, una respuesta 401 del servidor sin encabezado `WWW-Authenticate` lanzaba una excepción que la app informaba como «sin conexión». Ahora se trata como lo que es (sesión vencida) y se renueva sola.
+- Pruebas: 70 (nuevas en `ExplicacionErrorTest`, `CuentaTest` y `AceptarTodoTest`).
+
+---
+
+# Cambios · versión 1.3.1
+
+- **Corregido: «Supabase: permisos rechazados» al sincronizar, aunque «Probar conexión» decía que todo estaba bien.** La prueba solo lee; el error aparecía al escribir. Si un registro ya se había subido con una sesión anterior del teléfono (por ejemplo, después de entrar y salir del modo equipo, o si se perdió la sesión anónima), el servidor no deja sobrescribirlo (RLS, correcto por seguridad). Como los pasos del día se reenvían con el mismo id, chocaban y la app detenía toda la sincronización ahí. Ahora la app le da un id nuevo a ese registro, lo reenvía y sigue con el resto. Prueba nueva en `SyncManagerTest` (67 en total). No hay que cambiar nada en Supabase.
+
+---
+
 # Cambios · versión 1.3
 
 ## App

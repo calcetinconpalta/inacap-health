@@ -167,7 +167,10 @@ fun PrivacidadScreen(
                         Texto("El borrado de tus datos compartidos está pendiente: se completará cuando haya internet.")
                     }
                     if (nube.ultimoError != null) {
-                        Texto(com.inacap.health.data.remote.ExplicacionError.paraPersona(nube.ultimoError, Regex("HTTP (\\d{3})").find(nube.ultimoError!!)?.groupValues?.get(1)?.toIntOrNull()))
+                        com.inacap.health.ui.components.DetalleError(
+                            resumen = com.inacap.health.data.remote.ExplicacionError.paraPersona(nube.ultimoError, Regex("HTTP (\\d{3})").find(nube.ultimoError!!)?.groupValues?.get(1)?.toIntOrNull()),
+                            error = nube.ultimoError
+                        )
                     }
                 }
             }

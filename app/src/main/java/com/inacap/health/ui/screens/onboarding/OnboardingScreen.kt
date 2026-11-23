@@ -20,6 +20,9 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.state.ToggleableState
+import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -189,6 +192,34 @@ fun OnboardingScreen(
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
+
+                // "Aceptar todo": marca o desmarca las tres casillas de una vez (indica que incluye la opcional).
+                val marcadas = listOf(aceptaTerminos, mayoriaEdad, compartirNube).count { it }
+                val estadoTodo = when (marcadas) { 3 -> ToggleableState.On; 0 -> ToggleableState.Off; else -> ToggleableState.Indeterminate }
+                val cambiarTodo = {
+                    val nuevo = estadoTodo != ToggleableState.On
+                    aceptaTerminos = nuevo; mayoriaEdad = nuevo; compartirNube = nuevo
+                }
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable(role = Role.Checkbox) { cambiarTodo() }.padding(end = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TriStateCheckbox(
+                            state = estadoTodo, onClick = { cambiarTodo() },
+                            colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
+                        )
+                        Column(Modifier.padding(vertical = 10.dp)) {
+                            Text("Aceptar todo", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                            Text("Incluye compartir datos anónimos (opcional). Puedes desmarcar cualquiera abajo.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
 
                 FilaCheck(
                     checked = aceptaTerminos,

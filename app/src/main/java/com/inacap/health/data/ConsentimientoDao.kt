@@ -18,4 +18,8 @@ interface ConsentimientoDao {
 
     @Query("DELETE FROM consentimiento")
     suspend fun deleteAll()
+
+    /** Cambia el id de sincronización (cuando el anterior quedó asociado a otra sesión en la nube). */
+    @Query("UPDATE consentimiento SET uuid = :nuevo WHERE uuid = :viejo")
+    suspend fun cambiarUuid(viejo: String, nuevo: String): Int
 }

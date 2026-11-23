@@ -233,7 +233,10 @@ class SyncManager(
             val despues = outbox.contar().first()
             "Listo: se enviaron ${antes - despues} cambios" + if (despues > 0) " (quedan $despues)." else "."
         } catch (e: Exception) {
-            ExplicacionError.explicar(e.message, (e as? ErrorNube)?.codigo)
+            // Se guarda el error real (también los que no vienen del servidor) para «Ver detalle del error».
+            if (e !is ErrorNube) sesion.ultimoErrorSync = "${e.javaClass.simpleName}: ${e.message ?: "sin mensaje"}"
+            val codigo = (e as? ErrorNube)?.codigo
+            if (BuildConfig.DEBUG) ExplicacionError.explicar(e.message, codigo) else ExplicacionError.paraPersona(e.message, codigo)
         }
     }
 
@@ -291,7 +294,14 @@ class SyncManager(
                                 supabase.eliminar(item.tabla, item.registroId)
                             } else {
                                 val fila = JSONObject(item.payload).put("id", item.registroId)
-                                supabase.upsert(item.tabla, JSONArray().put(fila))
+                                try {
+                                    supabase.upsert(item.tabla, JSONArray().put(fila))
+                                } catch (e: ErrorNube) {
+                                    if (!e.esDeOtraSesion) throw e
+                                    // El id ya se usó con otra sesión (que la nube protege): se envía con uno nuevo.
+                                    val nuevo = reasignarId(item.tabla, item.registroId)
+                                    supabase.upsert(item.tabla, JSONArray().put(fila.put("id", nuevo)))
+                                }
                             }
                         }
                         DESTINO_NOSQL ->
@@ -311,6 +321,23 @@ class SyncManager(
                 }
             }
         }
+    }
+
+    /**
+     * Da un id nuevo al registro local y a sus envíos pendientes. Pasa cuando la sesión en la nube
+     * cambió (cuenta del equipo usada en el teléfono, sesión anónima perdida, otra cuenta) y el
+     * registro ya se había subido con la sesión anterior.
+     */
+    private suspend fun reasignarId(tabla: String, viejo: String): String {
+        val nuevo = UUID.randomUUID().toString()
+        when (tabla) {
+            TABLA_REGISTROS -> if (db.registroBiometricoDao().cambiarUuid(viejo, nuevo) == 0) db.pasosDiaDao().cambiarUuid(viejo, nuevo)
+            TABLA_SCOFF -> db.resultadoScoffDao().cambiarUuid(viejo, nuevo)
+            TABLA_CONSENTIMIENTOS -> db.consentimientoDao().cambiarUuid(viejo, nuevo)
+        }
+        outbox.cambiarRegistroId(tabla, viejo, nuevo)
+        Log.i(TAG, "Registro de $tabla reasignado a un id nuevo (era de otra sesión)")
+        return nuevo
     }
 
     private suspend fun descartarSiAgotado(item: SyncPendiente, error: String?) {

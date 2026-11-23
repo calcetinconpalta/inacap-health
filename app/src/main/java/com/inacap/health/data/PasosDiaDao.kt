@@ -24,4 +24,8 @@ interface PasosDiaDao {
 
     @Query("DELETE FROM pasos_dia")
     suspend fun deleteAll()
+
+    /** Cambia el id de sincronización (cuando el anterior quedó asociado a otra sesión en la nube). */
+    @Query("UPDATE pasos_dia SET uuid = :nuevo WHERE uuid = :viejo")
+    suspend fun cambiarUuid(viejo: String, nuevo: String): Int
 }

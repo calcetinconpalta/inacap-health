@@ -88,10 +88,10 @@ fun CuentaScreen(onBack: () -> Unit, onAcceso: () -> Unit = {}, onCerrarSesion: 
                 FilaValor("Último envío", fecha(app.sync.sesion.ultimoEnvio))
                 app.sync.sesion.ultimoErrorSync?.let { error ->
                     val codigo = Regex("HTTP (\\d{3})").find(error)?.groupValues?.get(1)?.toIntOrNull()
-                    // Detalle técnico solo en compilaciones de prueba; la persona ve un mensaje simple.
-                    TextoSecundario(
-                        if (com.inacap.health.BuildConfig.DEBUG) "Último problema: " + com.inacap.health.data.remote.ExplicacionError.explicar(error, codigo)
-                        else com.inacap.health.data.remote.ExplicacionError.paraPersona(error, codigo)
+                    // Mensaje simple + el error real bajo «Ver detalle del error».
+                    com.inacap.health.ui.components.DetalleError(
+                        resumen = "Último problema: " + com.inacap.health.data.remote.ExplicacionError.paraPersona(error, if (error.startsWith("Sin respuesta")) -1 else codigo),
+                        error = error
                     )
                 }
                 if (!app.sync.sesion.compartirNube) {

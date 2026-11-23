@@ -7,6 +7,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.work.testing.WorkManagerTestInitHelper
 import com.inacap.health.data.AppDatabase
 import com.inacap.health.data.Perfil
+import com.inacap.health.data.PasosDia
 import com.inacap.health.data.RegistroBiometrico
 import com.inacap.health.data.ResultadoScoff
 import com.inacap.health.data.remote.ConfigNube
@@ -20,6 +21,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
@@ -145,7 +147,7 @@ class SyncManagerTest {
 
         // Ningún dato personal o clínico sale del teléfono
         val todo = nube.peticiones.joinToString("\n") { it.cuerpo }
-        listOf("Ana", "Pérez", "asma", "maní", "salbutamol", "70.0", "175", "1,1,0,0,0").forEach {
+        listOf("Ana", "Pérez", "asma", "maní", "salbutamol", "70.0", "175.0", "1,1,0,0,0").forEach {
             assertFalse("Se filtró '$it' a la nube", todo.contains(it))
         }
     }
@@ -286,5 +288,39 @@ class SyncManagerTest {
     fun sinCompartir_avisaPorQueNoSeEnvia() = runBlocking {
         sync.sesion.compartirNube = false
         assertTrue(sync.sincronizarAhora().contains("desactivado"))
+    }
+
+    @Test
+    fun registroSubidoConOtraSesion_seReenviaConIdNuevoYNoTrabaLaCola() = runBlocking {
+        sync.sesion.compartirNube = true
+        val pasos = PasosDia(fecha = "2026-11-19", pasos = 4200, fuente = "sensor")
+        db.pasosDiaDao().upsert(pasos)
+        db.registroBiometricoDao().insert(imc)
+        // El servidor ya tiene estos ids, pero de una sesión anónima anterior del teléfono.
+        nube.idsDeOtraSesion += listOf(pasos.uuid, imc.uuid)
+        sync.encolarPasos(pasos)
+        sync.encolarRegistro(imc)
+        sync.encolarScoff(scoff)
+        esperarPendientes(3)
+
+        sync.procesar()
+
+        assertEquals("No debe quedar nada trabado", 0, pendientes())
+        assertNull(sync.sesion.ultimoErrorSync)
+        val enviados = nube.de("POST", "/rest/v1/registros_biometricos").map { JSONArray(it.cuerpo).getJSONObject(0).getString("id") }
+        assertEquals(4, enviados.size)   // 2 rechazados + 2 reenviados con id nuevo
+        val nuevoPasos = db.pasosDiaDao().get("2026-11-19")!!.uuid
+        val nuevoImc = db.registroBiometricoDao().getPorUuid(imc.uuid)
+        assertNull("El registro local cambió de id", nuevoImc)
+        assertNotEquals(pasos.uuid, nuevoPasos)
+        assertTrue(enviados.contains(nuevoPasos))
+        assertEquals(1, nube.de("POST", "/rest/v1/resultados_scoff").size)
+
+        // Las actualizaciones siguientes del mismo día usan el id nuevo (no vuelven a chocar).
+        sync.encolarPasos(db.pasosDiaDao().get("2026-11-19")!!.copy(pasos = 6000))
+        esperarPendientes(1)
+        sync.procesar()
+        assertEquals(nuevoPasos, JSONArray(nube.de("POST", "/rest/v1/registros_biometricos").last().cuerpo).getJSONObject(0).getString("id"))
+        assertEquals(0, pendientes())
     }
 }

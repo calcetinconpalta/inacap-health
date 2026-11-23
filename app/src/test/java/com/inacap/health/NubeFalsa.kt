@@ -38,6 +38,8 @@ class NubeFalsa : AutoCloseable {
     @Volatile var scoffRemotos = JSONArray()
     /** Respuestas a medida: "GET /rest/v1/conversaciones" o "POST /rest/v1/rpc/rol_actual" -> cuerpo JSON. */
     val respuestas = java.util.concurrent.ConcurrentHashMap<String, String>()
+    /** Ids que en la nube pertenecen a OTRA sesión: un upsert con ellos falla por RLS (como Supabase). */
+    val idsDeOtraSesion: MutableSet<String> = Collections.synchronizedSet(LinkedHashSet())
 
     private val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
         createContext("/") { manejar(it) }
@@ -62,6 +64,9 @@ class NubeFalsa : AutoCloseable {
                 404 to """{"code":"PGRST205","message":"Could not find the table 'public.usuarios' in the schema cache"}"""
             reglasFirestoreSinPublicar && ruta.contains("/documents/eventos") && ex.requestMethod == "POST" ->
                 403 to """{"error":{"code":403,"message":"Missing or insufficient permissions.","status":"PERMISSION_DENIED"}}"""
+            ex.requestMethod == "POST" && ruta.startsWith("/rest/v1/") && !ruta.startsWith("/rest/v1/rpc/") &&
+                synchronized(idsDeOtraSesion) { idsDeOtraSesion.any { cuerpo.contains("\"$it\"") } } ->
+                403 to """{"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy (USING expression) for table \"${ruta.substringAfterLast('/')}\""}"""
             respuestas.containsKey("${ex.requestMethod} $ruta") -> 200 to respuestas.getValue("${ex.requestMethod} $ruta")
             ruta == "/auth/v1/token" && query.contains("grant_type=password") -> {
                 val j = JSONObject(cuerpo)

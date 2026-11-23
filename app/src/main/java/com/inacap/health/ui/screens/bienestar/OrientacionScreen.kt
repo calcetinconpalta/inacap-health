@@ -74,6 +74,8 @@ class OrientacionViewModel(application: Application) : AndroidViewModel(applicat
     val mensajes = _mensajes.asStateFlow()
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
+    private val _errorDetalle = MutableStateFlow<String?>(null)
+    val errorDetalle = _errorDetalle.asStateFlow()
     private val _cargando = MutableStateFlow(false)
     val cargando = _cargando.asStateFlow()
     private val _scoffConAlerta = MutableStateFlow(false)
@@ -86,8 +88,17 @@ class OrientacionViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     private suspend fun intentar(bloque: suspend () -> Unit) {
-        try { bloque(); _error.value = null }
-        catch (e: Exception) { _error.value = "Sin conexión con el servicio de orientación. Revisa tu internet e intenta de nuevo." }
+        try { bloque(); _error.value = null; _errorDetalle.value = null }
+        catch (e: Exception) {
+            val codigo = (e as? com.inacap.health.data.remote.ErrorNube)?.codigo
+            _error.value = when {
+                codigo == -1 -> (com.inacap.health.data.remote.ExplicacionError.fallaDeRed(e.message) ?: "No hubo respuesta del servidor.") + " Intenta de nuevo."
+                codigo == 429 -> "Enviaste muchos mensajes seguidos. Espera un minuto e intenta de nuevo."
+                codigo != null -> "El servicio de orientación rechazó la acción (error $codigo). Intenta de nuevo."
+                else -> "No se pudo completar (${e.javaClass.simpleName}). Intenta de nuevo."
+            }
+            _errorDetalle.value = e.message ?: e.javaClass.name
+        }
     }
 
     fun aceptar() {
@@ -152,6 +163,7 @@ fun OrientacionScreen(
     var abierta by remember { mutableStateOf<String?>(null) }
     var nueva by remember { mutableStateOf(false) }
     val error by vm.error.collectAsState()
+    val errorDetalle by vm.errorDetalle.collectAsState()
 
     Scaffold(topBar = {
         BarraSuperior(if (soloAtencion) "Mensajes de Bienestar" else "Orientación entre pares", onBack = {
@@ -169,11 +181,10 @@ fun OrientacionScreen(
                 else -> Lista(vm, soloAtencion, onAbrir = { abierta = it }, onNueva = { nueva = true }, onBorrado = { aceptado = false })
             }
             error?.let {
-                Text(
-                    it, color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp,
-                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                Column(
+                    Modifier.align(Alignment.BottomCenter).fillMaxWidth()
                         .background(MaterialTheme.colorScheme.surface).padding(12.dp)
-                )
+                ) { com.inacap.health.ui.components.DetalleError(resumen = it, error = errorDetalle) }
             }
         }
     }

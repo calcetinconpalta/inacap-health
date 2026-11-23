@@ -17,6 +17,13 @@ class ErrorNube(val codigo: Int, mensaje: String, val deConfiguracion: Boolean =
     /** Falla del proyecto en la nube (clave, tabla, regla o proveedor): reintentar no sirve hasta corregirlo. */
     val esDeConfiguracion: Boolean
         get() = deConfiguracion || codigo == 401 || codigo == 403 || codigo == 404
+
+    /**
+     * El registro ya existe en la nube pero pertenece a OTRA sesión (por ejemplo, una sesión anónima
+     * anterior del mismo teléfono): las políticas RLS impiden sobrescribirlo. No es un error de configuración.
+     */
+    val esDeOtraSesion: Boolean
+        get() = codigo == 403 && (message ?: "").contains("row-level security", ignoreCase = true)
 }
 
 /** Cliente HTTP mínimo con HttpURLConnection (sin librerías externas). */
@@ -33,7 +40,7 @@ object Http {
         val conexion = try {
             URL(url).openConnection() as HttpURLConnection
         } catch (e: IOException) {
-            throw ErrorNube(-1, "Sin conexión: ${e.javaClass.simpleName}")
+            throw ErrorNube(-1, falla(metodo, url, e))
         }
         try {
             conexion.requestMethod = metodo
@@ -52,10 +59,29 @@ object Http {
             val texto = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() } ?: ""
             return HttpRespuesta(codigo, texto)
         } catch (e: IOException) {
-            throw ErrorNube(-1, "Sin conexión: ${e.javaClass.simpleName}")
+            // En Android, un 401 sin encabezado WWW-Authenticate lanza IOException aunque el servidor SÍ respondió.
+            // Si hay código de respuesta, se devuelve como respuesta normal (no es "sin conexión").
+            val codigo = runCatching { conexion.responseCode }.getOrDefault(-1)
+            if (codigo > 0) {
+                val texto = runCatching { conexion.errorStream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() } }.getOrNull() ?: ""
+                return HttpRespuesta(codigo, texto)
+            }
+            throw ErrorNube(-1, falla(metodo, url, e))
         } finally {
             conexion.disconnect()
         }
+    }
+
+    /**
+     * Describe una falla sin respuesta del servidor: qué petición, qué tipo de error y su mensaje
+     * (por ejemplo «Sin respuesta (POST /rest/v1/usuarios): SocketTimeoutException: timeout»).
+     */
+    internal fun falla(metodo: String, url: String, e: Throwable): String {
+        val ruta = runCatching { URL(url).path }.getOrDefault("")
+        val causa = generateSequence(e) { it.cause }.take(4).joinToString(" ← ") { c ->
+            c.javaClass.simpleName + (c.message?.takeIf { it.isNotBlank() }?.let { ": " + it.take(160) } ?: "")
+        }
+        return "Sin respuesta ($metodo $ruta): $causa"
     }
 
     /** Lanza [ErrorNube] si la respuesta no es 2xx. */

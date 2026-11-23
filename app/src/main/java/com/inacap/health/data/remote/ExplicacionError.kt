@@ -6,20 +6,51 @@ package com.inacap.health.data.remote
  * - [explicar]: qué hay que corregir en la configuración (solo equipo y compilaciones de prueba).
  */
 object ExplicacionError {
-    fun paraPersona(mensaje: String?, codigo: Int? = null): String {
-        val m = (mensaje ?: "").lowercase()
+    /** Tipo de falla cuando el servidor no respondió (código -1), según la excepción real. */
+    fun fallaDeRed(mensaje: String?): String? {
+        val m = mensaje ?: return null
+        if (!m.startsWith("Sin respuesta") && !m.startsWith("Sin conexión")) return null
         return when {
-            codigo == -1 || "sin conexión" in m -> "Sin conexión a internet. Se enviará cuando vuelvas a tener conexión."
+            "UnknownHostException" in m -> "No se encontró el servidor: el teléfono no tiene internet o la red no resuelve la dirección (DNS)."
+            "SocketTimeoutException" in m || "timeout" in m.lowercase() -> "El servidor tardó demasiado en responder (más de 15 s). Puede estar lento o la conexión es débil."
+            "SSLHandshakeException" in m || "CertPathValidatorException" in m || "SSLPeerUnverified" in m || "SSLException" in m ->
+                "La conexión segura fue rechazada (certificado). Revisa la fecha y hora del teléfono, o si la red Wi-Fi pide iniciar sesión."
+            "ConnectException" in m || "ECONNREFUSED" in m || "NoRouteToHost" in m -> "No se pudo conectar con el servidor: la red lo bloquea o el servidor no está disponible."
+            "ProtocolException" in m -> "El servidor respondió algo que la app no esperaba (error de protocolo)."
+            "SocketException" in m || "EOFException" in m || "reset" in m.lowercase() -> "La conexión se cortó a la mitad. Intenta de nuevo."
+            else -> "No hubo respuesta del servidor."
+        }
+    }
+
+    fun paraPersona(mensaje: String?, codigo: Int? = null): String {
+        fallaDeRed(mensaje)?.let { return "$it Tus datos quedan guardados y se enviarán después." }
+        return when {
+            codigo == -1 -> "No hubo respuesta del servidor. Tus datos quedan guardados y se enviarán después."
             codigo == 429 -> "Hiciste muchas acciones seguidas. Espera unos minutos y vuelve a intentarlo."
+            codigo == 401 -> "Tu sesión venció. Se renovará sola al volver a sincronizar."
+            codigo == 403 -> "El servidor rechazó el envío (permisos). Tus datos quedan guardados."
+            codigo != null && codigo >= 500 -> "El servidor tiene un problema en este momento. Se volverá a intentar automáticamente."
             else -> "No pudimos enviar tus datos todavía. Se volverá a intentar automáticamente."
         }
+    }
+
+    /**
+     * Detalle técnico para mostrar bajo «Ver detalle del error». En la versión publicada se ocultan las
+     * direcciones de los servidores; en las compilaciones de prueba se muestra completo.
+     */
+    fun detalle(mensaje: String?, completo: Boolean): String? {
+        val m = mensaje?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        if (completo) return m
+        return m.replace(Regex("""https?://[^\s/"]+"""), "https://servidor")
+            .replace(Regex("""[a-z0-9-]+\.(supabase\.co|googleapis\.com|firebaseio\.com|firebaseapp\.com)"""), "servidor")
     }
 
     fun explicar(mensaje: String?, codigo: Int? = null): String {
         val m = (mensaje ?: "").lowercase()
         val esSupabase = m.startsWith("supabase")
         return when {
-            codigo == -1 || "sin conexión" in m -> "Sin conexión a internet (o la red bloquea el servidor)."
+            fallaDeRed(mensaje) != null -> fallaDeRed(mensaje)!! + " Detalle: " + mensaje!!.take(220)
+            codigo == -1 -> "Sin respuesta del servidor. Detalle: ${mensaje?.take(220) ?: "desconocido"}"
             // ----- Supabase -----
             esSupabase && "anonymous" in m && ("disabled" in m || "provider" in m) ->
                 "Supabase: activa «Allow anonymous sign-ins» en Authentication → Sign In / Providers."
@@ -27,7 +58,9 @@ object ExplicacionError {
                 "Supabase: la clave no es válida. Copia la publishable (o anon) key desde Project Settings → API Keys."
             esSupabase && ("pgrst205" in m || "could not find the table" in m || "does not exist" in m || "pgrst202" in m) ->
                 "Supabase: faltan las tablas. Ejecuta backend/supabase/schema.sql completo en el SQL Editor."
-            esSupabase && ("row-level security" in m || "42501" in m || "permission denied" in m) ->
+            esSupabase && "row-level security" in m ->
+                "Supabase: un registro ya se había subido con otra sesión de este teléfono. Vuelve a sincronizar: la app le asigna un id nuevo."
+            esSupabase && ("42501" in m || "permission denied" in m) ->
                 "Supabase: permisos rechazados. Vuelve a ejecutar schema.sql completo (crea las políticas de seguridad)."
             esSupabase && codigo == 401 -> "Supabase: sesión o clave rechazada (401). Revisa SUPABASE_URL y la clave en local.properties."
             esSupabase && codigo == 404 -> "Supabase: dirección no encontrada (404). Revisa SUPABASE_URL o ejecuta schema.sql."
@@ -43,7 +76,7 @@ object ExplicacionError {
                 "Firestore: la base no existe. Créala en Firestore Database → Crear base de datos."
             codigo == 429 -> "Demasiados envíos seguidos: se reintentará en unos minutos."
             codigo != null && codigo >= 500 -> "El servidor no responde ahora: se reintentará solo."
-            else -> "Error: ${mensaje?.take(160) ?: "desconocido"}"
+            else -> "Error: ${mensaje?.take(300) ?: "desconocido"}"
         }
     }
 }

@@ -10,6 +10,7 @@ import com.inacap.health.data.RegistroBiometrico
 import com.inacap.health.data.ResultadoScoff
 import com.inacap.health.data.TipoConsentimiento
 import com.inacap.health.data.remote.ErrorNube
+import com.inacap.health.data.remote.ExplicacionError
 import com.inacap.health.legal.TextosLegales
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -41,7 +42,7 @@ object ReglasCuenta {
         val t = (e.message ?: "").lowercase()
         val codigo = (e as? ErrorNube)?.codigo
         return when {
-            codigo == -1 -> "Sin conexión. Revisa tu internet e intenta de nuevo."
+            codigo == -1 -> ExplicacionError.fallaDeRed(e.message) ?: "No hubo respuesta del servidor. Revisa tu internet e intenta de nuevo."
             "invalid_credentials" in t || "invalid login" in t -> "Correo o contraseña incorrectos."
             "email_not_confirmed" in t || "not confirmed" in t -> "Primero confirma tu correo con el enlace que te enviamos."
             "email_exists" in t || "already been registered" in t || "already registered" in t || "user_already_exists" in t ->
@@ -50,7 +51,7 @@ object ReglasCuenta {
             "email_address_invalid" in t || "invalid format" in t -> "Revisa el correo: el formato no es válido."
             codigo == 429 || "rate limit" in t -> "Demasiados intentos. Espera unos minutos e intenta de nuevo."
             "anonymous" in t && "disabled" in t -> "Las cuentas no están activadas en el servidor (inicio anónimo desactivado)."
-            else -> "No se pudo completar. Intenta de nuevo más tarde."
+            else -> "No se pudo completar (error ${codigo ?: e.javaClass.simpleName}). Intenta de nuevo más tarde."
         }
     }
 

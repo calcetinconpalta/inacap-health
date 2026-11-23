@@ -135,7 +135,9 @@ class CuentaTest {
         assertFalse(ReglasCuenta.contrasenaValida("corta1"))
         assertFalse(ReglasCuenta.contrasenaValida("solamenteletras"))
         assertTrue(ReglasCuenta.contrasenaValida("clave1234"))
-        assertEquals("Sin conexión. Revisa tu internet e intenta de nuevo.", ReglasCuenta.mensaje(ErrorNube(-1, "x")))
+        assertEquals("No hubo respuesta del servidor. Revisa tu internet e intenta de nuevo.", ReglasCuenta.mensaje(ErrorNube(-1, "x")))
+        assertTrue(ReglasCuenta.mensaje(ErrorNube(-1, "Sin respuesta (POST /auth/v1/token): SocketTimeoutException: timeout")).contains("tardó demasiado"))
+        assertTrue(ReglasCuenta.mensaje(ErrorNube(500, "boom")).contains("500"))
         assertEquals(1_763_028_000_000L, ReglasCuenta.fechaMs("2025-11-13T10:00:00+00:00"))
     }
 }
