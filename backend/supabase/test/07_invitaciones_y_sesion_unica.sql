@@ -89,8 +89,7 @@ end $$;
 -- ===== Una sola sesión activa por cuenta =====
 reset role;
 insert into auth.sessions (id, user_id) values
- ('5a000000-0000-4000-8000-00000000005a', 'c3000000-0000-4000-8000-0000000000c3'),   -- teléfono A
- ('5b000000-0000-4000-8000-00000000005b', 'c3000000-0000-4000-8000-0000000000c3');   -- teléfono B
+ ('5a000000-0000-4000-8000-00000000005a', 'c3000000-0000-4000-8000-0000000000c3');   -- teléfono A (B inicia sesión después)
 set role authenticated;
 select set_config('request.headers', '{"cf-connecting-ip":"198.51.100.7"}', false);
 select set_config('request.method', 'GET', false);
@@ -104,7 +103,14 @@ select public.registrar_sesion();
 select set_config('request.path', '/rest/v1/registros_biometricos', false);
 select public.antes_de_cada_peticion();   -- A funciona
 
--- Teléfono B inicia sesión: registrar_sesion pasa aunque A era la vigente…
+-- Teléfono B inicia sesión más tarde (recién ahí existe su sesión en auth.sessions)…
+reset role;
+insert into auth.sessions (id, user_id) values ('5b000000-0000-4000-8000-00000000005b', 'c3000000-0000-4000-8000-0000000000c3');
+set role authenticated;
+select set_config('request.headers', '{"cf-connecting-ip":"198.51.100.7"}', false);
+select set_config('request.method', 'GET', false);
+set request.jwt.claim.sub = 'c3000000-0000-4000-8000-0000000000c3';
+-- …y registrar_sesion pasa aunque A era la vigente…
 select set_config('request.jwt.claims', '{"sub":"c3000000-0000-4000-8000-0000000000c3","session_id":"5b000000-0000-4000-8000-00000000005b","is_anonymous":false}', false);
 select set_config('request.path', '/rpc/registrar_sesion', false);
 select public.antes_de_cada_peticion();
