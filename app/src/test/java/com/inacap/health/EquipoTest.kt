@@ -5,6 +5,8 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.testing.WorkManagerTestInitHelper
+import com.inacap.health.cuenta.CuentaRepositorio
+import com.inacap.health.cuenta.ResultadoAcceso
 import com.inacap.health.data.AppDatabase
 import com.inacap.health.data.remote.ConfigNube
 import com.inacap.health.data.sync.SyncManager
@@ -35,6 +37,7 @@ class EquipoTest {
     private lateinit var nube: NubeFalsa
     private lateinit var sync: SyncManager
     private lateinit var equipo: EquipoRepositorio
+    private lateinit var cuenta: CuentaRepositorio
 
     @Before fun preparar() {
         context = ApplicationProvider.getApplicationContext()
@@ -44,6 +47,7 @@ class EquipoTest {
         nube = NubeFalsa()
         sync = SyncManager(context, db, ConfigNube(supabaseUrl = nube.base, supabaseAnonKey = "sb_publishable_prueba", firebaseApiKey = "", firebaseProjectId = ""))
         equipo = EquipoRepositorio(context, sync)
+        cuenta = CuentaRepositorio(context, sync, db, equipo)
         nube.cuentas["tutora@inacap.cl"] = "Clave1234"
     }
 
@@ -64,10 +68,16 @@ class EquipoTest {
         assertEquals("una línea", Saneamiento.linea("una\nlínea", 50))
     }
 
+    /** Entra con el inicio de sesión único y acepta el compromiso (como en la pantalla). */
+    private fun entrar(rol: String, personal: String = "[]") = runBlocking {
+        nube.respuestas["POST /rest/v1/rpc/rol_actual"] = "\"$rol\""
+        nube.respuestas["GET /rest/v1/personal"] = personal
+        val r = cuenta.acceder("tutora@inacap.cl", "Clave1234") as ResultadoAcceso.Equipo
+        cuenta.confirmarEquipo(r)
+    }
+
     @Test fun iniciarSesion_conRolDelServidor() = runBlocking {
-        nube.respuestas["POST /rest/v1/rpc/rol_actual"] = "\"tutor\""
-        nube.respuestas["GET /rest/v1/personal"] = """[{"nombre_visible":"Tutora Camila"}]"""
-        assertNull(equipo.iniciarSesion("tutora@inacap.cl", "Clave1234"))
+        entrar("tutor", """[{"nombre_visible":"Tutora Camila"}]""")
         assertEquals(RolEquipo.TUTOR, equipo.rol)
         assertEquals("Tutora Camila", equipo.nombre)
         assertTrue(equipo.activo.value)
@@ -75,25 +85,14 @@ class EquipoTest {
         assertFalse(equipo.sesionVencida())
     }
 
-    @Test fun cuentaSinRol_noEntra() = runBlocking {
-        nube.respuestas["POST /rest/v1/rpc/rol_actual"] = "null"
-        val error = equipo.iniciarSesion("tutora@inacap.cl", "Clave1234")
-        assertNotNull(error)
-        assertTrue(error!!.contains("rol"))
-        assertNull(equipo.rol)
-        assertFalse(sync.sesion.modoEquipo)
-    }
-
     @Test fun contrasenaIncorrecta_noEntra() = runBlocking {
-        assertNotNull(equipo.iniciarSesion("tutora@inacap.cl", "otra"))
+        assertTrue(cuenta.acceder("tutora@inacap.cl", "otra") is ResultadoAcceso.Error)
         assertNull(equipo.rol)
         assertFalse(sync.sesion.modoEquipo)
     }
 
     @Test fun enviarMensaje_vaSaneadoYConRolDelEquipo() = runBlocking {
-        nube.respuestas["POST /rest/v1/rpc/rol_actual"] = "\"bienestar\""
-        nube.respuestas["GET /rest/v1/personal"] = """[{"nombre_visible":"Psicóloga"}]"""
-        assertNull(equipo.iniciarSesion("tutora@inacap.cl", "Clave1234"))
+        entrar("bienestar", """[{"nombre_visible":"Psicóloga"}]""")
         assertEquals(RolEquipo.PROFESIONAL, equipo.rol)
         nube.respuestas["POST /rest/v1/mensajes"] = """[{"id":"m1"}]"""
         equipo.enviar("c1", "  Hola​, ¿cómo estás?  ")
@@ -103,9 +102,7 @@ class EquipoTest {
     }
 
     @Test fun cerrarSesion_limpiaTodo() = runBlocking {
-        nube.respuestas["POST /rest/v1/rpc/rol_actual"] = "\"docente\""
-        nube.respuestas["GET /rest/v1/personal"] = "[]"
-        assertNull(equipo.iniciarSesion("tutora@inacap.cl", "Clave1234"))
+        entrar("docente")
         equipo.cerrarSesion()
         assertNull(equipo.rol)
         assertFalse(equipo.activo.value)

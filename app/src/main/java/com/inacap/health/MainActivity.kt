@@ -15,8 +15,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
-import com.inacap.health.ui.screens.equipo.AccesoEquipoScreen
+import androidx.activity.compose.BackHandler
+import com.inacap.health.cuenta.CuentaRepositorio
+import com.inacap.health.cuenta.ReglasCuenta
+import com.inacap.health.equipo.SesionEquipoReglas
 import com.inacap.health.ui.screens.equipo.EquipoApp
+import com.inacap.health.ui.screens.perfil.AccesoScreen
+import com.inacap.health.ui.screens.perfil.PerfilUiState
+import com.inacap.health.ui.screens.perfil.requiereAceptarTerminos
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
@@ -41,7 +47,8 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val app = application as HealthApp
-        if (savedInstanceState == null) {
+        val primeraVez = savedInstanceState == null
+        if (primeraVez) {
             app.sync.registrarEvento("app_abierta")
         }
         setContent {
@@ -63,13 +70,28 @@ class MainActivity : FragmentActivity() {
                 }
 
                 val equipoActivo by app.equipo.activo.collectAsState()
-                var sesionEquipoExpiro by remember { mutableStateOf(false) }
-                // Sesión del equipo: expira tras 30 min sin uso o 12 h desde que se inició.
+                val perfilUi by perfilViewModel.perfilUiState.collectAsState()
+                val terminosAceptados = (perfilUi as? PerfilUiState.Success)?.perfil?.requiereAceptarTerminos() == false
+
+                // Pantalla «Iniciar sesión» sobre la app: null = no se muestra; "" = sin mensaje.
+                // Se abre al salir del modo equipo (cerrar sesión o expiración), nunca la app de estudiante directo.
+                var accesoPendiente by remember { mutableStateOf<String?>(null) }
+                var estabaEnEquipo by remember { mutableStateOf(equipoActivo) }
                 LaunchedEffect(equipoActivo) {
+                    accesoPendiente = SesionEquipoReglas.accesoTrasCambio(estabaEnEquipo, equipoActivo, accesoPendiente)
+                    estabaEnEquipo = equipoActivo
+                    // Sesión del equipo: expira tras 30 min sin uso o 12 h desde que se inició.
                     while (equipoActivo) {
-                        if (app.equipo.sesionVencida()) { app.equipo.cerrarSesion(); sesionEquipoExpiro = true }
+                        if (app.equipo.sesionVencida()) {
+                            accesoPendiente = "Tu sesión del equipo expiró por seguridad. Vuelve a ingresar."
+                            app.equipo.cerrarSesion()
+                        }
                         delay(30_000)
                     }
+                }
+                // Una cuenta del equipo nunca queda como estudiante (versiones anteriores lo permitían).
+                LaunchedEffect(Unit) {
+                    if (primeraVez && CuentaRepositorio(app).revisarCuentaActual()) accesoPendiente = ReglasCuenta.CUENTA_ES_DEL_EQUIPO
                 }
 
                 Box(Modifier.fillMaxSize().pointerInput(equipoActivo) {
@@ -79,12 +101,18 @@ class MainActivity : FragmentActivity() {
                 }) {
                     when {
                         equipoActivo -> EquipoApp(app.equipo, onSalir = {})
-                        sesionEquipoExpiro -> AccesoEquipoScreen(
-                            repo = app.equipo,
-                            onDentro = { sesionEquipoExpiro = false },
-                            onBack = { sesionEquipoExpiro = false },
-                            mensajeInicial = "Tu sesión del equipo expiró por seguridad. Vuelve a ingresar."
-                        )
+                        accesoPendiente != null -> {
+                            val cerrar = { accesoPendiente = null }
+                            BackHandler(onBack = cerrar)
+                            AccesoScreen(
+                                desdeBienvenida = false,
+                                inicioSesion = true,
+                                permitirEstudiante = terminosAceptados,
+                                mensajeInicial = accesoPendiente?.takeIf { it.isNotEmpty() },
+                                onListo = cerrar,
+                                onBack = cerrar
+                            )
+                        }
                         else -> AppNav(perfilViewModel = perfilViewModel)
                     }
                     if (bloqueada) {

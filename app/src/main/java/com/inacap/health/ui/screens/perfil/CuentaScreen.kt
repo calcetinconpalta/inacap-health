@@ -40,7 +40,7 @@ import java.util.Locale
 
 /** Cuenta del estudiante: anónima o con correo, y estado del envío de datos. */
 @Composable
-fun CuentaScreen(onBack: () -> Unit, onAcceso: () -> Unit = {}, onCerrarSesion: () -> Unit = {}) {
+fun CuentaScreen(onBack: () -> Unit, onAcceso: () -> Unit = {}, onIniciarSesion: () -> Unit = {}, onCerrarSesion: () -> Unit = {}) {
     val app = LocalContext.current.applicationContext as HealthApp
     val pendientes by app.sync.pendientes.collectAsState(initial = 0)
     val scope = rememberCoroutineScope()
@@ -74,6 +74,14 @@ fun CuentaScreen(onBack: () -> Unit, onAcceso: () -> Unit = {}, onCerrarSesion: 
                     EstadoCuenta.NoDisponible -> TextoSecundario("Las cuentas no están disponibles en esta versión: la app funciona sin cuenta.")
                 }
                 com.inacap.health.ui.components.CodigoOculto("Código anónimo", app.sync.sesion.sbUid)
+            }
+            if (estadoCuenta != EstadoCuenta.NoDisponible) Tarjeta(titulo = "¿Eres del equipo?") {
+                TextoSecundario("Tutores pares, docentes supervisores, equipo de Bienestar y administración entran con su cuenta y la app abre el modo equipo según su rol.")
+                if (estadoCuenta is EstadoCuenta.Registrada) {
+                    TextoSecundario("Para entrar con una cuenta del equipo, primero cierra tu sesión de estudiante.")
+                } else {
+                    OutlinedButton(onClick = onIniciarSesion) { Text("Iniciar sesión del equipo", color = MaterialTheme.colorScheme.onSurface) }
+                }
             }
             if (confirmarSalida) AlertDialog(
                 onDismissRequest = { confirmarSalida = false },

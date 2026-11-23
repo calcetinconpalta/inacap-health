@@ -129,7 +129,7 @@ fun OnboardingScreen(
                 Spacer(modifier = Modifier.height(12.dp))
                 TextButton(onClick = onSoyEquipo, modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Soy parte del equipo (tutor, docente o profesional)",
+                        text = "Soy del equipo: iniciar sesión",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
                     )

@@ -93,6 +93,21 @@ class SesionNube(context: Context, private val cifrador: Cifrador = Cifradores.p
     val tieneSesion: Boolean
         get() = sbRefreshToken != null || fbRefreshToken != null
 
+    /** Copia de la sesión SQL actual, para volver a ella si un inicio de sesión se cancela o se rechaza. */
+    data class InstantaneaSql(
+        val access: String?, val refresh: String?, val expira: Long,
+        val uid: String?, val email: String?, val modoEquipo: Boolean
+    )
+
+    fun instantaneaSql() = InstantaneaSql(sbAccessToken, sbRefreshToken, sbExpiraEn, sbUid, cuentaEmail, modoEquipo)
+
+    fun restaurarSql(i: InstantaneaSql) {
+        sbAccessToken = i.access; sbRefreshToken = i.refresh; sbExpiraEn = i.expira
+        prefs.edit(commit = true) { if (i.uid == null) remove(K_SB_UID) else putString(K_SB_UID, i.uid) }
+        cuentaEmail = i.email
+        modoEquipo = i.modoEquipo
+    }
+
     fun limpiarSesionFirebase() {
         prefs.edit { listOf("fb_id", "fb_refresh", "fb_expira", "fb_uid").forEach { remove(it) } }
     }

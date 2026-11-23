@@ -19,10 +19,14 @@ import java.net.URLEncoder
 enum class RolEquipo(val clave: String, val nombre: String) {
     TUTOR("tutor", "Tutor par"),
     DOCENTE("docente", "Docente supervisor"),
-    PROFESIONAL("bienestar", "Profesional de salud");
+    PROFESIONAL("bienestar", "Profesional de salud"),
+    ADMIN("admin", "Administrador");
 
     companion object {
         fun de(clave: String?) = entries.firstOrNull { it.clave == clave }
+
+        /** Lee la respuesta de rpc("rol_actual"): "\"tutor\"", "tutor" o "null". */
+        fun deRespuesta(cuerpo: String): RolEquipo? = de(cuerpo.trim().trim('"').takeIf { it.isNotBlank() && it != "null" })
     }
 }
 
@@ -41,6 +45,17 @@ object SesionEquipoReglas {
 
     fun vencida(iniciadaEn: Long, ultimaActividad: Long, ahora: Long): Boolean =
         iniciadaEn <= 0 || ahora - ultimaActividad > INACTIVIDAD_MS || ahora - iniciadaEn > MAXIMA_MS
+
+    /**
+     * Pantalla «Iniciar sesión» al cambiar el modo equipo. Devuelve null si no se muestra, "" si se
+     * muestra sin mensaje, o el mensaje que ya había (por ejemplo, el de sesión expirada).
+     * Al salir del modo equipo SIEMPRE se vuelve a iniciar sesión, nunca a la app de estudiante directo.
+     */
+    fun accesoTrasCambio(estabaEnEquipo: Boolean, equipoActivo: Boolean, actual: String?): String? = when {
+        equipoActivo -> null
+        estabaEnEquipo -> actual ?: ""
+        else -> actual
+    }
 }
 
 /**
@@ -54,6 +69,15 @@ class EquipoRepositorio(context: Context, syncInyectado: com.inacap.health.data.
 
     private val _activo = MutableStateFlow(rol != null)
     val activo: StateFlow<Boolean> = _activo.asStateFlow()
+
+    init {
+        // Un inicio de sesión que quedó a medias (la app se cerró antes de confirmar el modo equipo)
+        // deja la sesión marcada como del equipo pero sin rol: se limpia para no quedar en un estado raro.
+        if (rol == null && sesion.modoEquipo) {
+            sesion.limpiarSesiones()
+            sesion.modoEquipo = false
+        }
+    }
 
     val rol: RolEquipo? get() = RolEquipo.de(prefs.getString("rol", null))
     val nombre: String get() = prefs.getString("nombre", "") ?: ""
@@ -69,32 +93,27 @@ class EquipoRepositorio(context: Context, syncInyectado: com.inacap.health.data.
 
     // ---------- Sesión ----------
 
-    /** @return null si entró; si no, el mensaje de error. */
-    suspend fun iniciarSesion(email: String, contrasena: String): String? = withContext(Dispatchers.IO) {
-        try {
-            val sb = sql()
-            sesion.modoEquipo = true      // desde ya: nada de estudiante se envía con esta sesión
-            sb.iniciarSesion(email.trim(), contrasena)
-            val rol = RolEquipo.de(sb.rpc("rol_actual").trim().trim('"').takeIf { it != "null" })
-            if (rol == null) {
-                sb.cerrarSesion(); sesion.limpiarSesiones(); sesion.modoEquipo = false
-                return@withContext "Tu cuenta aún no tiene un rol del equipo. Pide a un administrador que te lo asigne."
-            }
-            val fila = sb.seleccionar("personal", "select=nombre_visible&user_id=eq.${enc(sesion.sbUid ?: "")}")
-            val ahora = System.currentTimeMillis()
-            sesion.modoEquipo = true
-            prefs.edit(commit = true) {
-                putString("rol", rol.clave)
-                putString("nombre", fila.optJSONObject(0)?.optString("nombre_visible") ?: email)
-                putString("email", email.trim())
-                putLong("iniciada", ahora); putLong("actividad", ahora)
-            }
-            _activo.value = true
-            null
-        } catch (e: Exception) {
-            if (rol == null) sesion.modoEquipo = false
-            ReglasCuenta.mensaje(e)
+    // El inicio de sesión (estudiantes y equipo) está en CuentaRepositorio.acceder: autentica,
+    // consulta el rol en el servidor y, si es del equipo, llama a activar().
+
+    /** Nombre visible del personal con la sesión actual (o el correo si no tiene). */
+    internal fun nombreDelServidor(email: String): String = runCatching {
+        sql().seleccionar("personal", "select=nombre_visible&user_id=eq.${enc(sesion.sbUid ?: "")}")
+            .optJSONObject(0)?.optString("nombre_visible")?.takeIf { it.isNotBlank() && it != "null" }
+    }.getOrNull() ?: email.trim()
+
+    /** Abre el modo equipo con la sesión ya autenticada (el rol lo entregó el servidor). */
+    fun activar(rol: RolEquipo, nombre: String, email: String) {
+        val ahora = System.currentTimeMillis()
+        sesion.modoEquipo = true
+        aceptoConfidencialidad = true
+        prefs.edit(commit = true) {
+            putString("rol", rol.clave)
+            putString("nombre", nombre)
+            putString("email", email.trim())
+            putLong("iniciada", ahora); putLong("actividad", ahora)
         }
+        _activo.value = true
     }
 
     /** Crea una cuenta con correo (sin rol: luego el administrador se lo asigna). */

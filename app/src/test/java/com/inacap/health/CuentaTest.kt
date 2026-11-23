@@ -8,6 +8,7 @@ import androidx.work.testing.WorkManagerTestInitHelper
 import com.inacap.health.cuenta.CuentaRepositorio
 import com.inacap.health.cuenta.EstadoCuenta
 import com.inacap.health.cuenta.ReglasCuenta
+import com.inacap.health.cuenta.ResultadoAcceso
 import com.inacap.health.cuenta.ResultadoCuenta
 import com.inacap.health.data.AppDatabase
 import com.inacap.health.data.Perfil
@@ -98,7 +99,7 @@ class CuentaTest {
             .put(JSONObject("""{"id":"a0000000-0000-4000-8000-000000000004","tipo":"pasos","imc":null,"agua_ml":null,"frecuencia_cardiaca":null,"pasos":6400,"fuente":"sensor","fecha":"2026-11-12T12:00:00+00:00"}"""))
         nube.scoffRemotos = JSONArray().put(JSONObject("""{"id":"b0000000-0000-4000-8000-000000000001","puntaje":1,"requiere_derivacion":false,"fecha":"2026-11-09T12:00:00+00:00"}"""))
 
-        assertEquals(ResultadoCuenta.Listo, cuenta.iniciarSesion("ana@ejemplo.cl", "clave1234"))
+        assertEquals(ResultadoAcceso.Estudiante, cuenta.acceder("ana@ejemplo.cl", "clave1234"))
         assertEquals(EstadoCuenta.Registrada("ana@ejemplo.cl"), cuenta.estado())
         assertEquals(NubeFalsa.CUENTA_UID, sync.sesion.sbUid)
 
@@ -124,7 +125,7 @@ class CuentaTest {
 
     @Test fun iniciarSesion_contrasenaIncorrecta() = runBlocking {
         nube.cuentas["ana@ejemplo.cl"] = "clave1234"
-        val r = cuenta.iniciarSesion("ana@ejemplo.cl", "otra") as ResultadoCuenta.Error
+        val r = cuenta.acceder("ana@ejemplo.cl", "otra") as ResultadoAcceso.Error
         assertEquals("Correo o contraseña incorrectos.", r.mensaje)
         assertEquals(EstadoCuenta.Anonima, cuenta.estado())
     }
@@ -138,6 +139,9 @@ class CuentaTest {
         assertEquals("No hubo respuesta del servidor. Revisa tu internet e intenta de nuevo.", ReglasCuenta.mensaje(ErrorNube(-1, "x")))
         assertTrue(ReglasCuenta.mensaje(ErrorNube(-1, "Sin respuesta (POST /auth/v1/token): SocketTimeoutException: timeout")).contains("tardó demasiado"))
         assertTrue(ReglasCuenta.mensaje(ErrorNube(500, "boom")).contains("500"))
+        // 403: mensaje claro (no el técnico "error 403"), por inyección rechazada en el servidor/WAF.
+        assertTrue(ReglasCuenta.mensaje(ErrorNube(403, "forbidden")).contains("seguridad"))
+        assertFalse(ReglasCuenta.mensaje(ErrorNube(403, "forbidden")).contains("403"))
         assertEquals(1_763_028_000_000L, ReglasCuenta.fechaMs("2025-11-13T10:00:00+00:00"))
     }
 }

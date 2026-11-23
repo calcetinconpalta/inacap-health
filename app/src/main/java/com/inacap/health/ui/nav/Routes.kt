@@ -34,6 +34,8 @@ object Routes {
     const val CUENTA = "cuenta"
     const val APARIENCIA = "apariencia"
     const val ACCESO = "acceso"
+    /** Inicio de sesión único (estudiantes y equipo), siempre disponible en Perfil → Cuenta. */
+    const val ACCESO_SESION = "acceso_sesion"
     const val ACCESO_INICIAL = "acceso_inicial"
     const val EQUIPO_ACCESO = "equipo_acceso"
     const val ATENCION = "atencion"

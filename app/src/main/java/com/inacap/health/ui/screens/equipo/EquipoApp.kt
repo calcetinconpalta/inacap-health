@@ -2,7 +2,6 @@ package com.inacap.health.ui.screens.equipo
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,12 +10,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
@@ -28,8 +25,6 @@ import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -107,12 +102,14 @@ fun EquipoApp(repo: EquipoRepositorio, onSalir: () -> Unit) {
             RolEquipo.TUTOR -> it.tutorId == repo.miId
             RolEquipo.DOCENTE -> it.tipo == "orientacion"
             RolEquipo.PROFESIONAL -> it.tipo == "atencion" && it.profesionalId == repo.miId
+            RolEquipo.ADMIN -> false
         }
     }
     val pendientes = when (rol) {
         RolEquipo.TUTOR -> convs.count { it.tutorId == null && it.estado == "abierta" }
         RolEquipo.DOCENTE -> convs.count { it.estado == "abierta" && it.tutorId == null }
         RolEquipo.PROFESIONAL -> ders.count { it.estado == "pendiente" }
+        RolEquipo.ADMIN -> 0
     }
 
     abierta?.let { id ->
@@ -212,6 +209,11 @@ private fun Solicitudes(
                     }
                 }
             }
+            RolEquipo.ADMIN -> item {
+                Tarjeta(titulo = "Administración") {
+                    TextoSecundario("Las estadísticas, la gestión del equipo y la seguridad están por ahora en el panel web. Llegarán a la app en una próxima actualización.")
+                }
+            }
         }
         mensaje?.let { m -> item { TextoSecundario(m) } }
     }
@@ -264,11 +266,12 @@ private fun ChatEquipo(repo: EquipoRepositorio, rol: RolEquipo, id: String, conv
     var aviso by remember { mutableStateOf<String?>(null) }
     val lista = rememberLazyListState()
     val estado = conv?.estado ?: "abierta"
-    val propioRol = when (rol) { RolEquipo.PROFESIONAL -> "profesional"; RolEquipo.DOCENTE -> "docente"; RolEquipo.TUTOR -> "tutor" }
+    val propioRol = when (rol) { RolEquipo.PROFESIONAL -> "profesional"; RolEquipo.DOCENTE -> "docente"; RolEquipo.TUTOR -> "tutor"; RolEquipo.ADMIN -> "admin" }
     val puedeEscribir = estado == "abierta" && when (rol) {
         RolEquipo.TUTOR -> conv?.tutorId == repo.miId
         RolEquipo.DOCENTE -> true
         RolEquipo.PROFESIONAL -> conv?.profesionalId == repo.miId
+        RolEquipo.ADMIN -> false
     }
 
     suspend fun cargar() {
@@ -299,6 +302,7 @@ private fun ChatEquipo(repo: EquipoRepositorio, rol: RolEquipo, id: String, conv
                         else AssistChip(onClick = { accion { repo.supervisar(id, "reabierta", null) } }, label = { Text("Reabrir") })
                     }
                     RolEquipo.PROFESIONAL -> if (estado == "abierta") AssistChip(onClick = { accion { repo.cambiarEstado(id, "cerrada") } }, label = { Text("Cerrar atención") })
+                    RolEquipo.ADMIN -> {}
                 }
             }
             Text(
@@ -377,51 +381,3 @@ private fun CuentaEquipo(repo: EquipoRepositorio, rol: RolEquipo, onSalir: () ->
     )
 }
 
-/** Ingreso del equipo (desde la bienvenida). Incluye el acuerdo de confidencialidad. */
-@Composable
-fun AccesoEquipoScreen(repo: EquipoRepositorio, onDentro: () -> Unit, onBack: () -> Unit, mensajeInicial: String? = null) {
-    val scope = rememberCoroutineScope()
-    var email by remember { mutableStateOf("") }
-    var clave by remember { mutableStateOf("") }
-    var acepta by remember { mutableStateOf(repo.aceptoConfidencialidad) }
-    var crear by remember { mutableStateOf(false) }
-    var ocupado by remember { mutableStateOf(false) }
-    var mensaje by remember { mutableStateOf(mensajeInicial) }
-
-    Scaffold(topBar = { BarraSuperior("Ingreso del equipo", onBack) }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            TextoSecundario("Para tutores pares, docentes supervisores y profesionales de salud de Bienestar. Usa tu propio teléfono: mientras estés en modo equipo, la app no guarda ni envía datos de estudiante.")
-            if (!repo.disponible) { Tarjeta { TextoSecundario("El ingreso del equipo no está configurado en esta versión.") }; return@Column }
-            OutlinedTextField(email, { email = it.trim().take(120) }, label = { Text("Correo") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Email))
-            OutlinedTextField(clave, { clave = it.take(72) }, label = { Text("Contraseña") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation())
-            Row(Modifier.fillMaxWidth().clickable { acepta = !acepta }, verticalAlignment = Alignment.Top) {
-                Checkbox(acepta, { acepta = it }, colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary))
-                Spacer(Modifier.width(6.dp))
-                Text("Me comprometo a mantener la confidencialidad de lo que vea y a usarlo solo para orientar o atender a estudiantes.", fontSize = 14.sp, modifier = Modifier.padding(top = 12.dp))
-            }
-            Button(
-                onClick = {
-                    ocupado = true; mensaje = null
-                    scope.launch {
-                        if (crear) { mensaje = repo.crearCuentaEquipo(email, clave); crear = false }
-                        else {
-                            repo.aceptoConfidencialidad = true
-                            val error = repo.iniciarSesion(email, clave)
-                            if (error == null) onDentro() else mensaje = error
-                        }
-                        ocupado = false
-                    }
-                },
-                enabled = !ocupado && email.contains("@") && clave.length >= 8 && (crear || acepta),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(48.dp)
-            ) { Text(if (ocupado) "Un momento…" else if (crear) "Crear cuenta del equipo" else "Entrar", fontWeight = FontWeight.Bold) }
-            TextButton(onClick = { crear = !crear; mensaje = null }) {
-                Text(if (crear) "Ya tengo cuenta: entrar" else "¿Primera vez? Crear tu cuenta", color = MaterialTheme.colorScheme.primary)
-            }
-            mensaje?.let { Box(Modifier.fillMaxWidth()) { Text(it, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp) } }
-        }
-    }
-}

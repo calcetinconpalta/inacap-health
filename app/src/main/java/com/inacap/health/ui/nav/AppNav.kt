@@ -46,7 +46,6 @@ import com.inacap.health.ui.screens.onboarding.OnboardingScreen
 import com.inacap.health.cuenta.CuentaRepositorio
 import com.inacap.health.cuenta.EstadoCuenta
 import com.inacap.health.ui.screens.perfil.AccesoScreen
-import com.inacap.health.ui.screens.equipo.AccesoEquipoScreen
 import com.inacap.health.ui.screens.perfil.CuentaScreen
 import com.inacap.health.ui.screens.perfil.PerfilDatosScreen
 import com.inacap.health.ui.screens.seguridad.BloqueoConfigScreen
@@ -154,7 +153,7 @@ private fun AppNavContent(
         HubItem("Bloqueo de la app", "PIN o huella", Routes.BLOQUEO, true, Icons.Default.Lock),
         HubItem("Seguridad", "Cómo protegemos tu información", Routes.SEGURIDAD, true, Icons.Default.Lock),
         HubItem("Privacidad y mis datos", "Consentimientos, código anónimo y eliminar datos", Routes.PRIVACIDAD, true, Icons.Default.Settings),
-        HubItem("Cuenta", "Iniciar sesión o crear cuenta con correo", Routes.CUENTA, true, Icons.Default.AccountCircle),
+        HubItem("Cuenta e inicio de sesión", "Estudiantes y equipo: iniciar sesión o crear cuenta", Routes.CUENTA, true, Icons.Default.AccountCircle),
         HubItem("Términos y condiciones", "Términos y política de privacidad", Routes.TERMINOS, true, Icons.AutoMirrored.Filled.List)
     )
 
@@ -219,8 +218,15 @@ private fun AppNavContent(
             }
 
             composable(Routes.EQUIPO_ACCESO) {
+                // Desde la bienvenida, antes de aceptar los términos: solo cuentas del equipo.
                 // Al entrar, MainActivity cambia a la app del equipo.
-                AccesoEquipoScreen(repo = app.equipo, onDentro = {}, onBack = { navController.popBackStack() })
+                AccesoScreen(
+                    desdeBienvenida = false,
+                    inicioSesion = true,
+                    permitirEstudiante = false,
+                    onListo = { navController.popBackStack() },
+                    onBack = { navController.popBackStack() }
+                )
             }
             composable(Routes.TERMINOS) {
                 TerminosScreen(onBack = { navController.popBackStack() })
@@ -371,6 +377,7 @@ private fun AppNavContent(
                 CuentaScreen(
                     onBack = { navController.popBackStack() },
                     onAcceso = { navController.navigate(Routes.ACCESO) },
+                    onIniciarSesion = { navController.navigate(Routes.ACCESO_SESION) },
                     onCerrarSesion = {
                         perfilViewModel.cerrarSesionCuenta {
                             navController.navigate(Routes.ONBOARDING) { popUpTo(0) { inclusive = true } }
@@ -381,6 +388,14 @@ private fun AppNavContent(
             composable(Routes.ACCESO) {
                 AccesoScreen(
                     desdeBienvenida = false,
+                    onListo = { navController.popBackStack() },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(Routes.ACCESO_SESION) {
+                AccesoScreen(
+                    desdeBienvenida = false,
+                    inicioSesion = true,
                     onListo = { navController.popBackStack() },
                     onBack = { navController.popBackStack() }
                 )
@@ -398,7 +413,7 @@ private fun pestanaDe(ruta: String?): String = when (ruta) {
     Routes.SALUD, Routes.IMC_AGUA, Routes.HISTORIAL, Routes.PULSO, Routes.HEALTH_CONNECT, Routes.RESUMEN_PDF -> Routes.SALUD
     Routes.BIENESTAR, Routes.SCOFF, Routes.DERIVACION, Routes.EDUCATIVO, Routes.ORIENTACION, Routes.ATENCION, Routes.PH_VIDEOLAMADA -> Routes.BIENESTAR
     Routes.PERFIL, Routes.PERFIL_DATOS, Routes.RECORDATORIOS, Routes.BLOQUEO, Routes.SEGURIDAD,
-    Routes.PRIVACIDAD, Routes.CUENTA, Routes.TERMINOS, Routes.ACCESO, Routes.APARIENCIA -> Routes.PERFIL
+    Routes.PRIVACIDAD, Routes.CUENTA, Routes.TERMINOS, Routes.ACCESO, Routes.ACCESO_SESION, Routes.APARIENCIA -> Routes.PERFIL
     else -> Routes.INICIO
 }
 
