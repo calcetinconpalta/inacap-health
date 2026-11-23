@@ -56,6 +56,8 @@ android {
         buildConfigField("String", "FIREBASE_PROJECT_ID", claveNube("FIREBASE_PROJECT_ID"))
         // Clave PÚBLICA de Bienestar Estudiantil para cifrar derivaciones de extremo a extremo.
         buildConfigField("String", "BIENESTAR_CLAVE_PUBLICA", claveNube("BIENESTAR_CLAVE_PUBLICA"))
+        // Correo FIJO del equipo de Bienestar para "Enviar a Bienestar" (el estudiante no lo elige).
+        buildConfigField("String", "BIENESTAR_EMAIL", claveNube("BIENESTAR_EMAIL"))
     }
 
     buildTypes {

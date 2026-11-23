@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.inacap.health.HealthApp
 import com.inacap.health.salud.DatosResumen
+import com.inacap.health.salud.EnvioBienestar
 import com.inacap.health.salud.ResumenPdf
 import com.inacap.health.ui.components.BarraSuperior
 import com.inacap.health.ui.components.Tarjeta
@@ -136,8 +137,39 @@ fun ResumenPdfScreen(onBack: () -> Unit) {
                         ) { Text("Compartir") }
                     }
                 }
+                EnviarABienestar(f, uri = { uri(it) }, onError = { error = it })
             }
         }
+    }
+}
+
+/** Botón "Enviar a Bienestar": destinatario fijo, app de correo del propio estudiante y límite de envíos. */
+@Composable
+private fun EnviarABienestar(f: File, uri: (File) -> android.net.Uri, onError: (String) -> Unit) {
+    val context = LocalContext.current
+    var restantes by remember { mutableIntStateOf(EnvioBienestar.restantes(EnvioBienestar.historial(context), System.currentTimeMillis())) }
+    Tarjeta(titulo = "Enviar a Bienestar") {
+        if (!EnvioBienestar.configurado) {
+            TextoSecundario("El envío a Bienestar aún no está disponible. Mientras tanto, usa «Compartir».")
+            return@Tarjeta
+        }
+        TextoSecundario("Se abrirá tu app de correo con el PDF adjunto y la dirección de Bienestar ya puesta. El correo sale desde tu cuenta; revísalo antes de enviarlo.")
+        Button(
+            onClick = {
+                try {
+                    context.startActivity(EnvioBienestar.intent(uri(f)))
+                    EnvioBienestar.registrar(context)
+                    restantes = EnvioBienestar.restantes(EnvioBienestar.historial(context), System.currentTimeMillis())
+                } catch (_: ActivityNotFoundException) { onError("No hay una app de correo en este teléfono. Usa «Compartir».") }
+            },
+            enabled = restantes > 0,
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("Enviar a Bienestar") }
+        TextoSecundario(
+            if (restantes > 0) "Puedes enviar $restantes más por ahora (máximo ${EnvioBienestar.MAX_POR_DIA} al día y ${EnvioBienestar.MAX_POR_MES} al mes)."
+            else "Llegaste al máximo de envíos por ahora. Si es urgente, pide atención en Apoyo de Bienestar."
+        )
     }
 }
 
