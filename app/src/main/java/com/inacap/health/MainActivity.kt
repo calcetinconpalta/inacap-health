@@ -89,6 +89,15 @@ class MainActivity : FragmentActivity() {
                         delay(30_000)
                     }
                 }
+                // Una sola sesión por cuenta: si el servidor cerró esta (se inició sesión en otro
+                // teléfono), se sale del modo equipo y se vuelve a «Iniciar sesión» con el aviso.
+                val sesionCerrada by app.sync.sesion.sesionCerrada.collectAsState()
+                LaunchedEffect(sesionCerrada) {
+                    val motivo = sesionCerrada ?: return@LaunchedEffect
+                    if (app.equipo.activo.value) app.equipo.cerrarSesion()
+                    accesoPendiente = motivo
+                    app.sync.sesion.consumirSesionCerrada()
+                }
                 // Una cuenta del equipo nunca queda como estudiante (versiones anteriores lo permitían).
                 LaunchedEffect(Unit) {
                     if (primeraVez && CuentaRepositorio(app).revisarCuentaActual()) accesoPendiente = ReglasCuenta.CUENTA_ES_DEL_EQUIPO

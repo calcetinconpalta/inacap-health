@@ -91,7 +91,7 @@ fun AccesoScreen(
     var ocupado by remember { mutableStateOf(false) }
     var pendiente by remember { mutableStateOf((repo.estado() as? EstadoCuenta.Pendiente)?.email) }
     var recuperando by remember { mutableStateOf(false) }
-    var creandoEquipo by remember { mutableStateOf(false) }
+
     var equipoPorConfirmar by remember { mutableStateOf<ResultadoAcceso.Equipo?>(null) }
 
     fun ejecutar(accion: suspend () -> ResultadoCuenta) {
@@ -170,7 +170,7 @@ fun AccesoScreen(
                 desdeBienvenida -> TextoSecundario("Con una cuenta puedes recuperar tus registros si cambias de teléfono. Sin cuenta, la app funciona igual y tus datos quedan solo en este teléfono.")
             }
 
-            if (permitirEstudiante && !creandoEquipo) {
+            if (permitirEstudiante) {
                 SecondaryTabRow(selectedTabIndex = pestana, containerColor = MaterialTheme.colorScheme.background) {
                     listOf("Crear cuenta", "Iniciar sesión").forEachIndexed { i, t ->
                         Tab(selected = pestana == i, onClick = { pestana = i; mensaje = null; recuperando = false }, text = {
@@ -201,20 +201,6 @@ fun AccesoScreen(
                     TextButton(onClick = { recuperando = false; mensaje = null }) { Text("Volver", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
 
-                creandoEquipo -> {
-                    CampoContrasena("Contraseña", contrasena) { contrasena = it }
-                    TextoSecundario("Al menos 8 caracteres, con letras y números. Después de crearla, un administrador te asigna tu rol y entras con «Iniciar sesión».")
-                    Boton(if (ocupado) "Creando…" else "Crear cuenta del equipo", habilitado = !ocupado && ReglasCuenta.emailValido(email) && ReglasCuenta.contrasenaValida(contrasena)) {
-                        teclado?.hide()
-                        ocupado = true; mensaje = null
-                        scope.launch {
-                            mensaje = (context.applicationContext as HealthApp).equipo.crearCuentaEquipo(email, contrasena)
-                            contrasena = ""; creandoEquipo = false; pestana = 1
-                            ocupado = false
-                        }
-                    }
-                    TextButton(onClick = { creandoEquipo = false; mensaje = null }) { Text("Volver", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                }
 
                 pestana == 0 -> {
                     CampoContrasena("Contraseña", contrasena) { contrasena = it }
@@ -236,9 +222,11 @@ fun AccesoScreen(
                     )
                     Boton(if (ocupado) "Entrando…" else "Iniciar sesión", habilitado = ReglasCuenta.emailValido(email) && contrasena.isNotEmpty() && !ocupado) { entrar() }
                     TextButton(onClick = { recuperando = true; mensaje = null }) { Text("¿Olvidaste tu contraseña?", color = MaterialTheme.colorScheme.primary) }
-                    TextButton(onClick = { creandoEquipo = true; mensaje = null }) {
-                        Text("¿Eres del equipo y aún no tienes cuenta? Créala aquí", color = MaterialTheme.colorScheme.primary)
-                    }
+                    TextoSecundario(
+                        "¿Eres del equipo y aún no tienes cuenta? Pide a un administrador que registre tu correo. " +
+                            "Después crea tu cuenta con ese mismo correo" + (if (permitirEstudiante) " en «Crear cuenta»" else " desde la bienvenida de la app") +
+                            " y confírmalo: tu rol se activa solo y entras aquí con «Iniciar sesión»."
+                    )
                 }
             }
             mensaje?.let { Text(it, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Start) }

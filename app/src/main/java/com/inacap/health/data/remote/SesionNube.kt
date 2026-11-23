@@ -3,6 +3,8 @@ package com.inacap.health.data.remote
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import com.inacap.health.seguridad.Cifrador
 import com.inacap.health.seguridad.Cifradores
 
@@ -112,6 +114,26 @@ class SesionNube(context: Context, private val cifrador: Cifrador = Cifradores.p
         prefs.edit { listOf("fb_id", "fb_refresh", "fb_expira", "fb_uid").forEach { remove(it) } }
     }
 
+    /**
+     * Motivo por el que el servidor cerró la sesión de la cuenta (por ejemplo, se inició sesión en
+     * otro teléfono). La interfaz lo observa para volver a «Iniciar sesión» con ese aviso.
+     */
+    val sesionCerrada: StateFlow<String?> get() = SESION_CERRADA
+
+    fun marcarSesionCerrada(motivo: String) {
+        prefs.edit(commit = true) { putString(K_SESION_CERRADA, motivo) }
+        SESION_CERRADA.value = motivo
+    }
+
+    fun consumirSesionCerrada() {
+        prefs.edit { remove(K_SESION_CERRADA) }
+        SESION_CERRADA.value = null
+    }
+
+    init {
+        prefs.getString(K_SESION_CERRADA, null)?.let { SESION_CERRADA.value = it }
+    }
+
     fun limpiarSesiones() {
         prefs.edit {
             listOf(
@@ -129,5 +151,9 @@ class SesionNube(context: Context, private val cifrador: Cifrador = Cifradores.p
         const val K_BORRADO = "borrado_remoto_pendiente"
         const val K_SB_UID = "sb_uid"
         const val K_EMAIL = "cuenta_email"
+        const val K_SESION_CERRADA = "sesion_cerrada_motivo"
+
+        /** Compartido por toda la app (puede haber más de una instancia de SesionNube). */
+        private val SESION_CERRADA = MutableStateFlow<String?>(null)
     }
 }

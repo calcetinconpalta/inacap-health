@@ -6,6 +6,8 @@ insert into auth.users (id, email, is_anonymous) values
  ('b2000000-0000-4000-8000-0000000000b2', 'psico@ejemplo.cl', false),        -- profesional 2
  ('ee000000-0000-4000-8000-0000000000ee', 'nuevo@ejemplo.cl', false)
 on conflict do nothing;
+-- 1.3.3: el rol solo se asigna a cuentas con el correo confirmado.
+update auth.users set email_confirmed_at = now() where email in ('nutri@ejemplo.cl', 'psico@ejemplo.cl', 'nuevo@ejemplo.cl');
 insert into public.personal (user_id, rol, nombre_visible) values
  ('b1000000-0000-4000-8000-0000000000b1', 'bienestar', 'Nutri Paula'),
  ('b2000000-0000-4000-8000-0000000000b2', 'bienestar', 'Psico Tomás')
@@ -111,9 +113,16 @@ do $$ declare r jsonb; begin
   if jsonb_array_length(r -> 'ips_bloqueadas') < 1 then raise exception 'FALLO: bloqueo de IP'; end if;
   if jsonb_array_length(r -> 'auditoria') < 4 then raise exception 'FALLO: auditoría incompleta (%)', jsonb_array_length(r -> 'auditoria'); end if;
 end $$;
-do $$ declare ok boolean := false; begin
-  begin perform public.asignar_rol('sin-cuenta@ejemplo.cl', 'tutor', 'Nadie'); exception when others then ok := true; end;
-  if not ok then raise exception 'FALLO: se asignó rol a un correo sin cuenta'; end if;
+-- 1.3.3: un correo sin cuenta queda PRE-REGISTRADO (invitación), sin rol hasta que cree la cuenta y confirme.
+select public.asignar_rol('sin-cuenta@ejemplo.cl', 'tutor', 'Nadie');
+do $$ begin
+  if not exists (select 1 from public.listar_invitaciones() where correo = 'sin-cuenta@ejemplo.cl' and rol = 'tutor') then
+    raise exception 'FALLO: el correo sin cuenta no quedó pre-registrado';
+  end if;
+  if exists (select 1 from public.listar_equipo() where email = 'sin-cuenta@ejemplo.cl') then
+    raise exception 'FALLO: un correo sin cuenta apareció en el equipo';
+  end if;
+  perform public.cancelar_invitacion('sin-cuenta@ejemplo.cl');
 end $$;
 
 -- ===== Bloqueo y límite por IP (la función que PostgREST llama antes de cada petición) =====

@@ -32,7 +32,7 @@ const PESTANAS = {
   docente: [["orientacion", "Supervisión"]],
   bienestar: [["derivaciones", "Solicitudes"], ["orientacion", "Atención"]],
 };
-const NOMBRES_ROL = { admin: "Administrador", tutor: "Tutor par", docente: "Docente supervisor", bienestar: "Profesional de salud" };
+const NOMBRES_ROL = { admin: "Administrador", tutor: "Tutor par", docente: "Docente supervisor", bienestar: "Bienestar (estudiante de medicina)" };
 
 // Sesión: se cierra sola tras 15 min sin uso o 8 h desde que se inició (además de la expiración del token en el servidor).
 const SESION = { INACTIVIDAD_MS: 15 * 60_000, MAXIMA_MS: 8 * 3_600_000 };

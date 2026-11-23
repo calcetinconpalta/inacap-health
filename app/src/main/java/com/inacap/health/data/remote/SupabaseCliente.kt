@@ -38,7 +38,12 @@ class SupabaseCliente(
             if (r.codigo != 400 && r.codigo != 401 && r.codigo != 403) {
                 Http.exigirOk(r, "Supabase refresh", deConfiguracion = true)
             }
-            // Refresh inválido (usuario borrado o sesión expirada): se crea una nueva.
+            // Una cuenta con correo (o del equipo) NUNCA pasa en silencio a una sesión anónima:
+            // su sesión fue revocada (otro teléfono, contraseña cambiada…) y debe volver a ingresar.
+            if (sesion.cuentaEmail != null || sesion.modoEquipo) {
+                sesionCerrada(ReglasSesionUnica.MOTIVO_REVOCADA, "refresh HTTP ${r.codigo} ${r.cuerpo.take(200)}")
+            }
+            // Refresh inválido de una sesión anónima (usuario borrado o sesión expirada): se crea una nueva.
         }
 
         val r = Http.enviar(
@@ -60,14 +65,37 @@ class SupabaseCliente(
         return token
     }
 
+    /**
+     * Se cerró la sesión de la cuenta desde el servidor. Se limpian los tokens y se apaga el envío de
+     * datos (para no subir nada con una sesión anónima nueva); la interfaz vuelve a «Iniciar sesión».
+     */
+    private fun sesionCerrada(motivo: String, detalle: String): Nothing {
+        sesion.limpiarSesiones()
+        sesion.compartirNube = false
+        sesion.marcarSesionCerrada(motivo)
+        throw ErrorNube(401, "${ReglasSesionUnica.MARCA}: $detalle")
+    }
+
     private fun conReintentoToken(accion: (String) -> HttpRespuesta): HttpRespuesta {
         var r = accion(asegurarSesion())
+        if (r.codigo == 401 && ReglasSesionUnica.MARCA in r.cuerpo) {
+            sesionCerrada(ReglasSesionUnica.MOTIVO_OTRO_TELEFONO, "HTTP 401 ${r.cuerpo.take(200)}")
+        }
         if (r.codigo == 401) {
             sesion.sbAccessToken = null
             sesion.sbExpiraEn = 0
             r = accion(asegurarSesion())
         }
         return r
+    }
+
+    /**
+     * Una sola sesión activa por cuenta: deja vigente la de este teléfono y el servidor cierra
+     * las demás. Si el servidor aún no tiene esta función (404), no pasa nada.
+     */
+    fun registrarSesion() {
+        runCatching { rpc("registrar_sesion") }
+            .onFailure { if (it is ErrorNube && it.message?.contains(ReglasSesionUnica.MARCA) == true) throw it }
     }
 
     /** Inserta o actualiza (por id) una o varias filas. Idempotente: reenviar no duplica. */

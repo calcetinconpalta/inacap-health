@@ -1110,3 +1110,211 @@ begin
     update public.derivaciones set estado = p_estado, gestionada_por = auth.uid(), actualizada_en = now() where id = p_id;
     perform public.auditar('derivacion_gestionada', jsonb_build_object('derivacion', p_id, 'estado', p_estado));
 end $$;
+
+-- =====================================================================
+-- v4 (1.3.3) · Toda cuenta nace como ALUMNO; el equipo se PRE-REGISTRA.
+--   El administrador registra el correo y el rol (personal_invitado). El rol se
+--   asigna solo cuando una cuenta con ese correo existe Y TIENE EL CORREO CONFIRMADO:
+--   así nadie puede registrarse con el correo de otra persona y quedarse con su rol.
+-- =====================================================================
+
+create table if not exists public.personal_invitado (
+    correo         text primary key check (char_length(correo) <= 254 and correo ~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'),
+    rol            text not null check (rol in ('tutor', 'docente', 'bienestar', 'admin')),
+    nombre_visible text not null check (char_length(nombre_visible) between 2 and 40),
+    creado_por     uuid default auth.uid() references auth.users (id) on delete set null,
+    creado_en      timestamptz not null default now()
+);
+comment on table public.personal_invitado is
+    'Correos del equipo pre-registrados por un administrador. Se convierten en "personal" al confirmar el correo.';
+alter table public.personal_invitado enable row level security;
+revoke all on public.personal_invitado from anon, authenticated;   -- solo por las funciones de abajo
+
+create or replace function public.sanear_invitado()
+returns trigger language plpgsql as $$
+begin
+    new.correo := lower(btrim(new.correo));
+    new.nombre_visible := public.limpiar_texto(new.nombre_visible, 40);
+    -- Mismo formato que personal.nombre_visible: si se valida aquí, la asignación posterior no puede fallar.
+    if new.nombre_visible is null or new.nombre_visible !~ '^[[:alpha:][:space:].''-]{2,40}$' then
+        raise exception 'Nombre visible inválido' using errcode = '22023';
+    end if;
+    return new;
+end $$;
+drop trigger if exists personal_invitado_sanear on public.personal_invitado;
+create trigger personal_invitado_sanear before insert or update on public.personal_invitado
+    for each row execute function public.sanear_invitado();
+
+-- Pasa la invitación de [p_user] (si su correo está confirmado) a la tabla personal. Devuelve el rol o null.
+create or replace function public.aplicar_invitacion(p_user uuid)
+returns text language plpgsql volatile security definer set search_path = public, auth as $$
+declare
+    u   record;
+    inv record;
+begin
+    select id, lower(btrim(email)) as correo, email_confirmed_at, coalesce(is_anonymous, false) as anonimo
+      into u from auth.users where id = p_user;
+    if u.id is null or u.anonimo or u.correo is null or u.email_confirmed_at is null then return null; end if;
+    select * into inv from public.personal_invitado i where i.correo = u.correo;
+    if not found then return null; end if;
+    insert into public.personal (user_id, rol, nombre_visible, activo) values (u.id, inv.rol, inv.nombre_visible, true)
+    on conflict (user_id) do update set rol = excluded.rol, nombre_visible = excluded.nombre_visible, activo = true;
+    delete from public.personal_invitado i where i.correo = u.correo;
+    perform public.auditar('rol_por_invitacion', jsonb_build_object('usuario', u.id, 'rol', inv.rol));
+    return inv.rol;
+end $$;
+revoke all on function public.aplicar_invitacion(uuid) from public, anon, authenticated;
+
+-- La app la llama al iniciar sesión (en vez de rol_actual): aplica la invitación pendiente
+-- de la propia cuenta (solo con el correo confirmado) y devuelve el rol vigente.
+create or replace function public.reclamar_rol_invitado()
+returns text language plpgsql volatile security definer set search_path = public as $$
+begin
+    if auth.uid() is null then return null; end if;
+    perform public.aplicar_invitacion(auth.uid());
+    return public.rol_actual();
+end $$;
+revoke all on function public.reclamar_rol_invitado() from public, anon;
+grant execute on function public.reclamar_rol_invitado() to authenticated;
+
+-- También al confirmar el correo (o al crear una cuenta ya confirmada), sin esperar a la app.
+-- Nunca debe impedir la confirmación: cualquier error se ignora (la app vuelve a intentarlo al entrar).
+create or replace function public.invitacion_al_confirmar()
+returns trigger language plpgsql security definer set search_path = public, auth as $$
+begin
+    if new.email_confirmed_at is not null and not coalesce(new.is_anonymous, false) then
+        begin
+            perform public.aplicar_invitacion(new.id);
+        exception when others then
+            raise warning 'No se aplicó la invitación de %: %', new.id, sqlerrm;
+        end;
+    end if;
+    return new;
+end $$;
+do $$ begin
+    drop trigger if exists invitacion_al_confirmar on auth.users;
+    create trigger invitacion_al_confirmar after insert or update of email_confirmed_at, email on auth.users
+        for each row execute function public.invitacion_al_confirmar();
+exception when insufficient_privilege then
+    raise notice 'Sin permiso para crear el disparador en auth.users: el rol se aplicará al iniciar sesión.';
+end $$;
+
+-- Pre-registro desde el panel. Si la cuenta ya existe y tiene el correo confirmado, se asigna de inmediato.
+create or replace function public.invitar_personal(p_email text, p_rol text, p_nombre text)
+returns text language plpgsql volatile security definer set search_path = public, auth as $$
+declare
+    v_correo text := lower(btrim(coalesce(p_email, '')));
+    v_uid    uuid;
+begin
+    if not public.tiene_rol('admin') then perform public.rechazar(403, 'Solo administradores'); end if;
+    if p_rol is null or p_rol not in ('tutor', 'docente', 'bienestar', 'admin') then
+        raise exception 'Rol inválido' using errcode = '22023';
+    end if;
+    insert into public.personal_invitado (correo, rol, nombre_visible, creado_por, creado_en)
+    values (v_correo, p_rol, p_nombre, auth.uid(), now())
+    on conflict (correo) do update
+        set rol = excluded.rol, nombre_visible = excluded.nombre_visible, creado_por = excluded.creado_por, creado_en = now();
+    perform public.auditar('personal_invitado', jsonb_build_object('rol', p_rol));
+    select id into v_uid from auth.users where lower(btrim(email)) = v_correo and not coalesce(is_anonymous, false);
+    if v_uid is not null and public.aplicar_invitacion(v_uid) is not null then return 'asignado'; end if;
+    return 'invitado';
+end $$;
+
+-- asignar_rol (lo usaba el panel) ahora pre-registra: ya no asigna a cuentas sin correo confirmado
+-- ni falla si la persona aún no tiene cuenta.
+create or replace function public.asignar_rol(p_email text, p_rol text, p_nombre text)
+returns void language plpgsql volatile security definer set search_path = public as $$
+begin
+    perform public.invitar_personal(p_email, p_rol, p_nombre);
+end $$;
+
+create or replace function public.listar_invitaciones()
+returns table (correo text, rol text, nombre_visible text, creado_en timestamptz)
+language plpgsql stable security definer set search_path = public as $$
+begin
+    if not public.tiene_rol('admin') then perform public.rechazar(403, 'Solo administradores'); end if;
+    return query select i.correo, i.rol, i.nombre_visible, i.creado_en from public.personal_invitado i order by i.creado_en desc;
+end $$;
+
+create or replace function public.cancelar_invitacion(p_email text)
+returns void language plpgsql volatile security definer set search_path = public as $$
+begin
+    if not public.tiene_rol('admin') then perform public.rechazar(403, 'Solo administradores'); end if;
+    delete from public.personal_invitado i where i.correo = lower(btrim(p_email));
+    perform public.auditar('invitacion_cancelada', '{}'::jsonb);
+end $$;
+
+revoke all on function public.invitar_personal(text, text, text), public.asignar_rol(text, text, text),
+    public.listar_invitaciones(), public.cancelar_invitacion(text) from public, anon;
+grant execute on function public.invitar_personal(text, text, text), public.asignar_rol(text, text, text),
+    public.listar_invitaciones(), public.cancelar_invitacion(text) to authenticated;
+
+-- =====================================================================
+-- v4 (1.3.3) · Una sola sesión activa por cuenta con correo.
+--   Al iniciar sesión, la app llama registrar_sesion(): queda vigente la sesión de ese
+--   teléfono y se revocan las demás (sus tokens de renovación dejan de servir). Hasta que
+--   venza su token de acceso, el teléfono anterior es rechazado en cada petición con
+--   SESION_REEMPLAZADA (ver antes_de_cada_peticion), y la app vuelve a «Iniciar sesión».
+--   Las cuentas anónimas no se ven afectadas.
+-- =====================================================================
+
+create table if not exists public.sesiones_vigentes (
+    user_id        uuid primary key references auth.users (id) on delete cascade,
+    session_id     uuid not null,
+    actualizada_en timestamptz not null default now()
+);
+alter table public.sesiones_vigentes enable row level security;
+revoke all on public.sesiones_vigentes from anon, authenticated;
+
+create or replace function public.registrar_sesion()
+returns void language plpgsql volatile security definer set search_path = public, auth as $$
+declare
+    v_sid uuid := nullif(auth.jwt() ->> 'session_id', '')::uuid;
+begin
+    if auth.uid() is null or v_sid is null or coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) then return; end if;
+    insert into public.sesiones_vigentes (user_id, session_id, actualizada_en) values (auth.uid(), v_sid, now())
+    on conflict (user_id) do update set session_id = excluded.session_id, actualizada_en = now();
+    -- Revoca las otras sesiones (sus refresh tokens se borran en cascada).
+    begin
+        delete from auth.sessions where user_id = auth.uid() and id <> v_sid;
+    exception when undefined_table or insufficient_privilege then
+        null;   -- sin acceso a auth.sessions: igual las rechaza antes_de_cada_peticion
+    end;
+end $$;
+revoke all on function public.registrar_sesion() from public, anon;
+grant execute on function public.registrar_sesion() to authenticated;
+
+-- Control por IP (igual que antes) + rechazo de sesiones reemplazadas.
+create or replace function public.antes_de_cada_peticion()
+returns void language plpgsql volatile security definer set search_path = public as $$
+declare
+    v_ip text := public.ip_cliente();
+    escritura boolean := coalesce(current_setting('request.method', true), 'GET') <> 'GET'
+                         and current_setting('transaction_read_only', true) = 'off';
+    v_sid text := nullif(auth.jwt() ->> 'session_id', '');
+begin
+    if exists (select 1 from public.ips_bloqueadas b where b.ip = v_ip and b.hasta > now()) then
+        perform public.rechazar(403, 'Acceso bloqueado temporalmente.');
+    end if;
+    -- Una sola sesión por cuenta: la que se registró al último gana. registrar_sesion se deja
+    -- pasar siempre (es justo la llamada con que el teléfono nuevo toma la sesión).
+    if v_sid is not null and auth.uid() is not null
+       and coalesce(current_setting('request.path', true), '') not like '%/rpc/registrar_sesion'
+       and exists (select 1 from public.sesiones_vigentes s where s.user_id = auth.uid() and s.session_id::text <> v_sid) then
+        perform public.rechazar(401, 'SESION_REEMPLAZADA: iniciaste sesión en otro teléfono.');
+    end if;
+    -- Las lecturas corren en transacciones de solo lectura: se cuentan solo las escrituras.
+    if escritura and v_ip <> 'desconocida' then
+        if public.superar_limite(v_ip, 'peticiones', 120, 60) then          -- 120 escrituras por minuto por IP
+            insert into public.rechazos (ip, motivo) values (v_ip, 'limite_ip');
+            -- Quien insiste (más de 10 rechazos en 10 min) queda bloqueado 15 minutos.
+            if (select count(*) from public.rechazos r where r.ip = v_ip and r.fecha > now() - interval '10 minutes') > 10 then
+                insert into public.ips_bloqueadas (ip, hasta, motivo) values (v_ip, now() + interval '15 minutes', 'Bloqueo automático por exceso de peticiones')
+                on conflict (ip) do update set hasta = excluded.hasta, motivo = excluded.motivo;
+            end if;
+            perform public.rechazar(429, 'Demasiadas solicitudes desde tu red. Intenta en un minuto.');
+        end if;
+    end if;
+end $$;
+grant execute on function public.antes_de_cada_peticion() to anon, authenticated;
+notify pgrst, 'reload config';

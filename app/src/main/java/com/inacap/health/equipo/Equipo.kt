@@ -173,14 +173,6 @@ class EquipoRepositorio(context: Context, syncInyectado: com.inacap.health.data.
         _activo.value = true
     }
 
-    /** Crea una cuenta con correo (sin rol: luego el administrador se lo asigna). */
-    suspend fun crearCuentaEquipo(email: String, contrasena: String): String = withContext(Dispatchers.IO) {
-        try {
-            val sb = sql()
-            sb.registrarConCorreo(email.trim(), contrasena)
-            "Cuenta creada. Confirma tu correo si te llega un enlace y pide a un administrador que te asigne tu rol."
-        } catch (e: Exception) { ReglasCuenta.mensaje(e) }
-    }
 
     fun registrarActividad() = prefs.edit { putLong("actividad", System.currentTimeMillis()) }
 

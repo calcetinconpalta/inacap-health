@@ -28,6 +28,7 @@ class NubeFalsa : AutoCloseable {
 
     // --- Cuentas con correo (Supabase Auth) ---
     /** Si es true, agregar un correo exige confirmarlo con un enlace. */
+    @Volatile var sesionReemplazada = false
     @Volatile var confirmacionRequerida = false
     /** Correo ya confirmado de la cuenta actual ("" = anónima). */
     @Volatile var emailConfirmado = ""
@@ -67,6 +68,11 @@ class NubeFalsa : AutoCloseable {
             ex.requestMethod == "POST" && ruta.startsWith("/rest/v1/") && !ruta.startsWith("/rest/v1/rpc/") &&
                 synchronized(idsDeOtraSesion) { idsDeOtraSesion.any { cuerpo.contains("\"$it\"") } } ->
                 403 to """{"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy (USING expression) for table \"${ruta.substringAfterLast('/')}\""}"""
+            // Tarea 13: otro teléfono tomó la sesión de esta cuenta.
+            sesionReemplazada && ruta.startsWith("/rest/v1/") && !ruta.endsWith("/rpc/registrar_sesion") ->
+                401 to """{"code":"INH401","details":null,"hint":null,"message":"SESION_REEMPLAZADA: iniciaste sesión en otro teléfono."}"""
+            sesionReemplazada && ruta == "/auth/v1/token" && query.contains("grant_type=refresh_token") ->
+                400 to """{"code":400,"error_code":"refresh_token_not_found","msg":"Invalid Refresh Token: Refresh Token Not Found"}"""
             respuestas.containsKey("${ex.requestMethod} $ruta") -> 200 to respuestas.getValue("${ex.requestMethod} $ruta")
             ruta == "/auth/v1/token" && query.contains("grant_type=password") -> {
                 val j = JSONObject(cuerpo)

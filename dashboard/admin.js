@@ -11,9 +11,10 @@ const el = (tag, props = {}, ...hijos) => {
   return n;
 };
 const fecha = (iso) => (iso ? new Date(iso).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" }) : "Nunca");
-const ROLES = { tutor: "Tutor par", docente: "Docente supervisor", bienestar: "Profesional de salud", admin: "Administrador" };
+const ROLES = { tutor: "Tutor par", docente: "Docente supervisor", bienestar: "Bienestar (estudiante de medicina)", admin: "Administrador" };
 const ACCIONES = {
   rol_asignado: "Rol asignado", rol_desactivado: "Acceso desactivado", ip_bloqueada: "IP bloqueada",
+  personal_invitado: "Correo pre-registrado", rol_por_invitacion: "Rol activado (correo confirmado)", invitacion_cancelada: "Pre-registro cancelado",
   ip_desbloqueada: "IP desbloqueada", derivacion_gestionada: "Derivación actualizada", atencion_iniciada: "Chat de atención iniciado",
   ip_bloqueada_auto: "IP bloqueada automáticamente",
 };
@@ -24,7 +25,9 @@ function fuenteSupabase(sb) {
   const ok = ({ data, error }) => { if (error) throw new Error(error.message); return data; };
   return {
     equipo: async () => ok(await sb.rpc("listar_equipo")),
-    asignar: async (email, rol, nombre) => ok(await sb.rpc("asignar_rol", { p_email: email, p_rol: rol, p_nombre: nombre })),
+    asignar: async (email, rol, nombre) => ok(await sb.rpc("invitar_personal", { p_email: email, p_rol: rol, p_nombre: nombre })),
+    invitaciones: async () => ok(await sb.rpc("listar_invitaciones")),
+    cancelarInvitacion: async (email) => ok(await sb.rpc("cancelar_invitacion", { p_email: email })),
     desactivar: async (uid) => ok(await sb.rpc("desactivar_personal", { p_user: uid })),
     seguridad: async () => ok(await sb.rpc("resumen_seguridad")),
     bloquear: async (ip, minutos, motivo) => ok(await sb.rpc("bloquear_ip", { p_ip: ip, p_minutos: minutos, p_motivo: motivo })),
@@ -51,14 +54,18 @@ function fuenteDemo() {
       { fecha: hace(1440), accion: "rol_desactivado", detalle: {}, actor: "Coordinación" },
     ],
   };
+  let invitaciones = [{ correo: "nueva.tutora@ejemplo.cl", rol: "tutor", nombre_visible: "Valentina Pérez", creado_en: hace(300) }];
   return {
     equipo: async () => equipo.map((p) => ({ ...p })),
     asignar: async (email, rol, nombre) => {
       const p = equipo.find((x) => x.email === email);
-      if (p) Object.assign(p, { rol, nombre_visible: nombre, activo: true });
-      else equipo.push({ user_id: crypto.randomUUID(), email, rol, nombre_visible: nombre, activo: true, ultimo_acceso: null });
-      seg.auditoria.unshift({ fecha: new Date().toISOString(), accion: "rol_asignado", detalle: { rol }, actor: "Tú (demo)" });
+      seg.auditoria.unshift({ fecha: new Date().toISOString(), accion: "personal_invitado", detalle: { rol }, actor: "Tú (demo)" });
+      if (p) { Object.assign(p, { rol, nombre_visible: nombre, activo: true }); return "asignado"; }
+      invitaciones = [{ correo: email, rol, nombre_visible: nombre, creado_en: new Date().toISOString() }, ...invitaciones.filter((i) => i.correo !== email)];
+      return "invitado";
     },
+    invitaciones: async () => invitaciones.map((i) => ({ ...i })),
+    cancelarInvitacion: async (email) => { invitaciones = invitaciones.filter((i) => i.correo !== email); },
     desactivar: async (uid) => { equipo.find((x) => x.user_id === uid).activo = false; },
     seguridad: async () => JSON.parse(JSON.stringify(seg)),
     bloquear: async (ip, minutos, motivo) => {
@@ -84,15 +91,18 @@ async function panelEquipo(raiz, fuente) {
   const rolSel = el("select", { id: "a-rol" }, ...Object.entries(ROLES).map(([k, v]) => el("option", { value: k }, v)));
   const form = el("form", { className: "a-form" },
     el("label", {}, "Correo de la cuenta", el("input", { type: "email", id: "a-email", required: true, maxLength: 254, autocomplete: "off" })),
-    el("label", {}, "Nombre visible", el("input", { type: "text", id: "a-nombre", required: true, maxLength: 60, placeholder: "Ej.: Camila (Nutrición)" })),
+    el("label", {}, "Nombre visible", el("input", { type: "text", id: "a-nombre", required: true, maxLength: 40, placeholder: "Ej.: Camila Rojas" })),
     el("label", {}, "Rol", rolSel),
-    el("button", { type: "submit", className: "btn-primario" }, "Dar acceso"));
+    el("button", { type: "submit", className: "btn-primario" }, "Pre-registrar"));
   const aviso = el("p", { className: "nota", role: "status" });
   raiz.replaceChildren(
     el("article", { className: "tarjeta" },
-      el("header", {}, el("h3", {}, "Dar o cambiar acceso"),
-        el("p", {}, "La persona primero crea su cuenta con correo (en la app: «Soy del equipo» → «Crear tu cuenta»). Luego le asignas el rol aquí.")),
+      el("header", {}, el("h3", {}, "Pre-registrar a alguien del equipo"),
+        el("p", {}, "Toda cuenta creada en la app es de estudiante. Registra aquí el correo y el rol: cuando la persona cree su cuenta con ese correo y lo confirme, el rol se activa solo. Si ya tiene cuenta con el correo confirmado, se activa de inmediato.")),
       form, aviso),
+    el("article", { className: "tarjeta" },
+      el("header", {}, el("h3", {}, "Pre-registros pendientes"), el("p", {}, "Correos que aún no crean su cuenta o no la confirman")),
+      el("div", { className: "tabla", id: "a-invitaciones" })),
     el("article", { className: "tarjeta" },
       el("header", {}, el("h3", {}, "Equipo"), el("p", {}, "Cuentas con acceso al panel y a la app en modo equipo")),
       el("div", { className: "tabla", id: "a-equipo" })));
@@ -111,18 +121,29 @@ async function panelEquipo(raiz, fuente) {
       return [p.nombre_visible, p.email, ROLES[p.rol] || p.rol, p.activo ? "Activo" : "Sin acceso", fecha(p.ultimo_acceso), accion];
     }));
     $("#a-equipo").replaceChildren(t);
+    const invs = await fuente.invitaciones();
+    $("#a-invitaciones").replaceChildren(tablaDe(["Nombre", "Correo", "Rol", "Registrado", ""], invs.map((i) => {
+      const quitar = el("button", { type: "button", className: "btn-icono" }, "Cancelar");
+      quitar.onclick = async () => {
+        if (!confirm(`¿Cancelar el pre-registro de ${i.correo}?`)) return;
+        try { await fuente.cancelarInvitacion(i.correo); await lista(); } catch (e) { alert(e.message); }
+      };
+      return [i.nombre_visible, i.correo, ROLES[i.rol] || i.rol, fecha(i.creado_en), quitar];
+    })));
   }
 
   form.onsubmit = async (e) => {
     e.preventDefault();
     const email = limpiar($("#a-email").value, 254).toLowerCase();
-    const nombre = limpiar($("#a-nombre").value, 60).replace(/\n/g, " ");
+    const nombre = limpiar($("#a-nombre").value, 40).replace(/\n/g, " ");
     if (!EMAIL_VALIDO.test(email)) { aviso.textContent = "Escribe un correo válido."; return; }
-    if (nombre.length < 2) { aviso.textContent = "Escribe un nombre visible."; return; }
+    if (!/^[\p{L}\s.'-]{2,40}$/u.test(nombre)) { aviso.textContent = "Nombre visible: solo letras, espacios, puntos, apóstrofos o guiones (2 a 40)."; return; }
     if (rolSel.value === "admin" && !confirm("El rol Administrador puede dar y quitar accesos y bloquear IPs. ¿Continuar?")) return;
     try {
-      await fuente.asignar(email, rolSel.value, nombre);
-      aviso.textContent = `Listo: ${nombre} ahora es ${ROLES[rolSel.value]}.`;
+      const r = await fuente.asignar(email, rolSel.value, nombre);
+      aviso.textContent = r === "asignado"
+        ? `Listo: ${nombre} ya es ${ROLES[rolSel.value]}.`
+        : `Pre-registrado: cuando ${email} cree su cuenta y confirme el correo, será ${ROLES[rolSel.value]}.`;
       form.reset();
       await lista();
     } catch (err) { aviso.textContent = err.message; }

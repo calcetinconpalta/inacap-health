@@ -5,6 +5,14 @@ package com.inacap.health.data.remote
  * - [paraPersona]: mensaje sencillo para estudiantes, sin nombres de servicios ni detalles técnicos.
  * - [explicar]: qué hay que corregir en la configuración (solo equipo y compilaciones de prueba).
  */
+/** Tarea 13: una sola sesión activa por cuenta (ver registrar_sesion en schema.sql). */
+object ReglasSesionUnica {
+    /** Texto que el servidor pone en el rechazo (antes_de_cada_peticion). */
+    const val MARCA = "SESION_REEMPLAZADA"
+    const val MOTIVO_OTRO_TELEFONO = "Iniciaste sesión en otro teléfono. Para usar tu cuenta aquí, vuelve a ingresar."
+    const val MOTIVO_REVOCADA = "Tu sesión se cerró (por ejemplo, porque iniciaste sesión en otro teléfono). Vuelve a ingresar."
+}
+
 object ExplicacionError {
     /** Tipo de falla cuando el servidor no respondió (código -1), según la excepción real. */
     fun fallaDeRed(mensaje: String?): String? {
@@ -40,6 +48,7 @@ object ExplicacionError {
 
     /** Mensaje simple para acciones en línea (modo equipo, chats): sin nombres de servicios. */
     fun simple(mensaje: String?, codigo: Int? = null): String {
+        if (mensaje?.contains(ReglasSesionUnica.MARCA) == true) return ReglasSesionUnica.MOTIVO_OTRO_TELEFONO
         redSimple(mensaje)?.let { return it }
         val m = (mensaje ?: "").lowercase()
         return when {
@@ -54,6 +63,7 @@ object ExplicacionError {
     }
 
     fun paraPersona(mensaje: String?, codigo: Int? = null): String {
+        if (mensaje?.contains(ReglasSesionUnica.MARCA) == true) return ReglasSesionUnica.MOTIVO_OTRO_TELEFONO
         redSimple(mensaje)?.let { return "$it Tus datos quedan guardados y se enviarán después." }
         return when {
             codigo == -1 -> "No hubo respuesta. Tus datos quedan guardados y se enviarán después."

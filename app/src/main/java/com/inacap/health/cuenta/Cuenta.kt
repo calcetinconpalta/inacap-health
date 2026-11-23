@@ -133,7 +133,7 @@ class CuentaRepositorio(
             if (u.optString("email").equals(email.trim(), true) && !u.optBoolean("is_anonymous", true)) {
                 sb.actualizarUsuario(JSONObject().put("password", contrasena))
                 sesion.cuentaEmail = email.trim(); sesion.emailPendiente = null
-                activarRespaldo()
+                res = trasCrearCuenta(sb)
             } else {
                 sesion.emailPendiente = email.trim()
                 res = ResultadoCuenta.ConfirmaCorreo(email.trim())
@@ -156,10 +156,38 @@ class CuentaRepositorio(
             } else {
                 sb.actualizarUsuario(JSONObject().put("password", contrasena))
                 sesion.cuentaEmail = email; sesion.emailPendiente = null
-                activarRespaldo()
+                res = trasCrearCuenta(sb)
             }
         }
         return if (r is ResultadoCuenta.Error) r else res
+    }
+
+    /**
+     * Rol según el servidor. Primero aplica la invitación pendiente de la cuenta (si el administrador
+     * pre-registró su correo y ya está confirmado); luego lo lee. El rol nunca lo decide la app.
+     */
+    private fun rolDelServidor(sb: com.inacap.health.data.remote.SupabaseCliente): RolEquipo? {
+        runCatching { sb.rpc("reclamar_rol_invitado") }   // servidores anteriores a 1.3.3 no la tienen
+        return RolEquipo.deRespuesta(sb.rpc("rol_actual"))
+    }
+
+    /**
+     * Toda cuenta creada desde la app es de alumno. Si el correo estaba pre-registrado como del equipo,
+     * NO queda como alumno: se borra lo de estudiante que se alcanzó a subir con ella, se cierra la
+     * sesión y se pide entrar con «Iniciar sesión» (modo equipo).
+     */
+    private suspend fun trasCrearCuenta(sb: com.inacap.health.data.remote.SupabaseCliente): ResultadoCuenta {
+        sb.registrarSesion()
+        if (runCatching { rolDelServidor(sb) }.getOrNull() == null) {
+            activarRespaldo()
+            return ResultadoCuenta.Listo
+        }
+        sesion.compartirNube = false
+        db.syncPendienteDao().deleteAll()
+        runCatching { sb.eliminarMisDatos("eliminacion") }   // no borra la cuenta del personal
+        runCatching { sb.cerrarSesion() }
+        sesion.limpiarSesiones()
+        return ResultadoCuenta.Error(ReglasCuenta.CUENTA_ES_DEL_EQUIPO)
     }
 
     /**
@@ -182,7 +210,8 @@ class CuentaRepositorio(
             sesion.modoEquipo = true
             try {
                 sb.iniciarSesion(email.trim(), contrasena)
-                val rol = RolEquipo.deRespuesta(sb.rpc("rol_actual"))
+                sb.registrarSesion()               // una sola sesión activa por cuenta
+                val rol = rolDelServidor(sb)
                 when {
                     rol != null -> ResultadoAcceso.Equipo(rol, equipo.nombreDelServidor(email), email.trim(), anteriorConToken)
                     !permitirEstudiante -> {
@@ -226,7 +255,7 @@ class CuentaRepositorio(
     suspend fun revisarCuentaActual(): Boolean = withContext(Dispatchers.IO) {
         val sb = sync.clienteSql ?: return@withContext false
         if (sesion.modoEquipo || sesion.cuentaEmail == null) return@withContext false
-        runCatching { RolEquipo.deRespuesta(sb.rpc("rol_actual")) }.getOrNull() ?: return@withContext false
+        runCatching { rolDelServidor(sb) }.getOrNull() ?: return@withContext false
         // Primero se corta el envío de datos de estudiante con esta cuenta y se vacía la bandeja.
         sesion.compartirNube = false
         db.syncPendienteDao().deleteAll()

@@ -13,11 +13,14 @@ psql -d inacap_test -f 03_admin_y_borrado.sql  # dashboard, borrado y purga
 psql -d inacap_test -v ON_ERROR_STOP=1 -f 04_roles_orientacion_derivaciones.sql  # roles, chat y derivaciones
 psql -d inacap_test -v ON_ERROR_STOP=1 -f 05_v3_seguridad_y_atencion.sql          # límites, IP, limpieza, atención, equipo
 psql -d inacap_test -v ON_ERROR_STOP=1 -f 06_inyeccion_payloads.sql               # inyección SQL/XSS en campos de texto y con formato
+psql -d inacap_test -v ON_ERROR_STOP=1 -f 07_invitaciones_y_sesion_unica.sql      # 1.3.3: equipo pre-registrado y una sesión por cuenta
 ```
 
 Resultado esperado: en `01` el usuario B ve 1 registro (no los de A); en `02` los 5 intentos fallan;
 en `03` el dashboard devuelve cifras; tras borrar, B desaparece por completo y A (que solo revocó) conserva su fila sin datos;
 `04` termina con «TODAS LAS PRUEBAS DE ROLES, ORIENTACIÓN Y DERIVACIONES PASARON» (si algo falla se detiene con «FALLO: …»);
+`07` termina con «TODAS LAS PRUEBAS DE INVITACIONES Y SESIÓN ÚNICA PASARON» (pre-registrado + confirmado → rol;
+sin confirmar → sin rol hasta confirmar; no pre-registrado → alumno; el teléfono anterior queda rechazado);
 `06` termina con «TODAS LAS PRUEBAS DE INYECCIÓN SQL/XSS PASARON»: cada payload se guarda como texto literal
 (nunca se ejecuta) o se rechaza donde el campo tiene formato restringido (código, nombre visible, versión, enum).
 
