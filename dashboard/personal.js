@@ -76,7 +76,14 @@ function fuenteSupabase(sb, uid) {
     tomar: async (id) => ok(await sb.rpc("tomar_conversacion", { p_id: id })),
     estado: async (id, estado, nota) => ok(await sb.rpc("cambiar_estado_conversacion", { p_id: id, p_estado: estado, p_nota: nota ? limpiar(nota) : null })),
     supervisar: async (id, accion, nota) => ok(await sb.rpc("supervisar", { p_id: id, p_accion: accion, p_nota: nota ? limpiar(nota) : null })),
-    derivaciones: async () => ok(await sb.from("derivaciones").select("id,canal,codigo,fecha,estado,contacto_cifrado").not("contacto_cifrado", "is", null).order("fecha", { ascending: false }).limit(200)),
+    derivaciones: async () => ok(await sb.from("derivaciones").select("id,usuario_id,canal,codigo,fecha,estado,contacto_cifrado").not("contacto_cifrado", "is", null).order("fecha", { ascending: false }).limit(200)),
+    // 1.3.3: antecedentes de salud cifrados (solo Bienestar los ve; se descifran en este navegador).
+    antecedentes: async (ids) => {
+      if (!ids.length) return {};
+      const { data, error } = await sb.from("antecedentes_cifrados").select("usuario_id,cifrado").in("usuario_id", ids);
+      if (error) return {};   // servidor sin la tabla todavía
+      return Object.fromEntries(data.map((a) => [a.usuario_id, a.cifrado]));
+    },
     gestionar: async (id, estado) => ok(await sb.rpc("gestionar_derivacion", { p_id: id, p_estado: estado })),
     iniciarAtencion: async (id) => ok(await sb.rpc("iniciar_atencion", { p_derivacion: id })),
   };
@@ -114,8 +121,11 @@ async function fuenteDemo() {
     { nombre: "Valentina", contacto: "valentina.ejemplo@correo.cl", mensaje: "Prefiero que me escriban por correo.", codigo: "INH-7QK2PA" },
     { nombre: "Matías", contacto: "+56 9 1234 5678", mensaje: "", codigo: "INH-M3X9TB" },
   ];
+  const antecedentesDemo = {
+    u0: await cifrarSobre(JSON.stringify({ v: 1, patologias: "Hipertensión", alergias: "Paracetamol", medicamentos: "Losartán 50 mg" }), claves.par.publicKey, claves.huella),
+  };
   const ders = await Promise.all(contactos.map(async (c, i) => ({
-    id: `d${i}`, canal: i ? "bienestar_presencial" : "bienestar_correo", codigo: c.codigo, fecha: iso(30 + i * 500),
+    id: `d${i}`, usuario_id: `u${i}`, canal: i ? "bienestar_presencial" : "bienestar_correo", codigo: c.codigo, fecha: iso(30 + i * 500),
     estado: i ? "en_contacto" : "pendiente", contacto_cifrado: await cifrarSobre(JSON.stringify(c), claves.par.publicKey, claves.huella),
   })));
   return {
@@ -132,6 +142,7 @@ async function fuenteDemo() {
     },
     supervisar: async (id, accion, nota) => { if (["derivada", "cerrada"].includes(accion)) convs.find((c) => c.id === id).estado = accion; (bit[id] ||= []).push({ accion, nota, creada_en: new Date().toISOString() }); },
     derivaciones: async () => ders.map((d) => ({ ...d })),
+    antecedentes: async () => ({ ...antecedentesDemo }),
     gestionar: async (id, estado) => { ders.find((d) => d.id === id).estado = estado; },
     iniciarAtencion: async (id) => {
       const nueva = { id: `a-${id}`, tema: "apoyo_profesional", tipo: "atencion", estado: "abierta", tutor_id: null, profesional_id: "yo", actualizada_en: new Date().toISOString() };
@@ -272,9 +283,17 @@ async function panelDerivaciones(raiz, fuente) {
 
   async function tabla() {
     const filas = await fuente.derivaciones();
-    const t = el("table", {}, el("thead", {}, el("tr", {}, ...["Fecha", "Código", "Canal", "Contacto", "Estado", "Chat"].map((h) => el("th", {}, h)))));
+    const t = el("table", {}, el("thead", {}, el("tr", {}, ...["Fecha", "Código", "Canal", "Contacto", "Antecedentes", "Estado", "Chat"].map((h) => el("th", {}, h)))));
     const tb = el("tbody");
+    const sobres = fuente.antecedentes ? await fuente.antecedentes([...new Set(filas.map((d) => d.usuario_id).filter(Boolean))]) : {};
     for (const d of filas) {
+      let antecedentes = sobres[d.usuario_id] ? "Cifrados" : "No compartidos";
+      if (clave && sobres[d.usuario_id]) {
+        try {
+          const a = await descifrarSobre(sobres[d.usuario_id], clave.privada);
+          antecedentes = `Patologías: ${a.patologias || "—"} · Alergias: ${a.alergias || "—"} · Medicamentos: ${a.medicamentos || "—"}`;
+        } catch { antecedentes = "No se pudo descifrar"; }
+      }
       let contacto = "Cifrado";
       if (clave) {
         try {
@@ -289,7 +308,7 @@ async function panelDerivaciones(raiz, fuente) {
         try { await fuente.iniciarAtencion(d.id); alert("Chat listo. Ábrelo en la pestaña Atención: la persona lo verá en la app, en Apoyo profesional → Ver mensajes."); }
         catch (e) { alert(e.message); }
       };
-      tb.append(el("tr", {}, el("td", {}, fecha(d.fecha)), el("td", {}, d.codigo), el("td", {}, CANALES[d.canal] || d.canal), el("td", {}, contacto), el("td", {}, sel), el("td", {}, chat)));
+      tb.append(el("tr", {}, el("td", {}, fecha(d.fecha)), el("td", {}, d.codigo), el("td", {}, CANALES[d.canal] || d.canal), el("td", {}, contacto), el("td", {}, antecedentes), el("td", {}, sel), el("td", {}, chat)));
     }
     t.append(tb);
     $("#d-tabla").replaceChildren(filas.length ? t : el("p", { className: "vacio" }, "No hay solicitudes con contacto."));

@@ -15,6 +15,7 @@ psql -d inacap_test -v ON_ERROR_STOP=1 -f 05_v3_seguridad_y_atencion.sql        
 psql -d inacap_test -v ON_ERROR_STOP=1 -f 06_inyeccion_payloads.sql               # inyección SQL/XSS en campos de texto y con formato
 psql -d inacap_test -v ON_ERROR_STOP=1 -f 07_invitaciones_y_sesion_unica.sql      # 1.3.3: equipo pre-registrado y una sesión por cuenta
 psql -d inacap_test -v ON_ERROR_STOP=1 -f 08_sede.sql                              # 1.3.3: sede (lista cerrada, se ocultan sedes con < 5)
+psql -d inacap_test -v ON_ERROR_STOP=1 -f 09_antecedentes.sql                      # 1.3.3: antecedentes cifrados (solo la persona y Bienestar)
 ```
 
 Resultado esperado: en `01` el usuario B ve 1 registro (no los de A); en `02` los 5 intentos fallan;

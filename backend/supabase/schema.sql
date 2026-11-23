@@ -1396,3 +1396,47 @@ begin
 end $$;
 revoke all on function public.eliminar_mis_datos(text) from public, anon;
 grant execute on function public.eliminar_mis_datos(text) to authenticated;
+
+-- =====================================================================
+-- v4 (1.3.3) · Antecedentes de salud para quien atiende (patologías, alergias, medicamentos).
+--   Se cifran EN EL TELÉFONO con la clave pública de Bienestar (igual que contacto_cifrado):
+--   aquí solo hay texto ilegible; ni la base ni los administradores pueden leerlos.
+--   Se suben al pedir atención y cada vez que la persona los edita. No se usan para estadísticas.
+--   Se borran al eliminar la cuenta (en cascada) o al revocar (eliminar_mis_datos).
+-- =====================================================================
+
+create table if not exists public.antecedentes_cifrados (
+    usuario_id     uuid primary key default auth.uid() references public.usuarios (id) on delete cascade,
+    cifrado        jsonb not null check (
+                       jsonb_typeof(cifrado) = 'object'
+                       and cifrado ?& array['v', 'alg', 'ek', 'iv', 'ct']
+                       and octet_length(cifrado::text) < 8192),
+    actualizado_en timestamptz not null default now()
+);
+alter table public.antecedentes_cifrados enable row level security;
+revoke all on public.antecedentes_cifrados from anon, authenticated;
+grant select on public.antecedentes_cifrados to authenticated;
+drop policy if exists antecedentes_select on public.antecedentes_cifrados;
+-- La persona ve lo suyo; Bienestar (que tiene la clave privada) puede leer el sobre cifrado.
+create policy antecedentes_select on public.antecedentes_cifrados for select to authenticated
+    using (usuario_id = auth.uid() or public.tiene_rol('bienestar'));
+
+create or replace function public.guardar_antecedentes(p_cifrado jsonb)
+returns void language plpgsql volatile security definer set search_path = public as $$
+begin
+    if auth.uid() is null then perform public.rechazar(401, 'Se requiere sesión'); end if;
+    if public.rol_actual() is not null then perform public.rechazar(403, 'Solo estudiantes'); end if;
+    if public.superar_limite(auth.uid()::text, 'antecedentes', 30, 3600) then
+        perform public.rechazar(429, 'Demasiados cambios seguidos. Intenta más tarde.');
+    end if;
+    insert into public.antecedentes_cifrados (usuario_id, cifrado, actualizado_en) values (auth.uid(), p_cifrado, now())
+    on conflict (usuario_id) do update set cifrado = excluded.cifrado, actualizado_en = now();
+end $$;
+
+create or replace function public.borrar_antecedentes()
+returns void language sql volatile security definer set search_path = public as $$
+    delete from public.antecedentes_cifrados where usuario_id = auth.uid();
+$$;
+
+revoke all on function public.guardar_antecedentes(jsonb), public.borrar_antecedentes() from public, anon;
+grant execute on function public.guardar_antecedentes(jsonb), public.borrar_antecedentes() to authenticated;

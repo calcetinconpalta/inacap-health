@@ -167,7 +167,8 @@ fun OnboardingScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         PuntoConsentimiento(
                             numero = "b",
-                            texto = "Tus datos de salud son sensibles: se guardan en tu teléfono y nunca se venden. Solo si tú lo activas, se envía una copia anonimizada (sin tu nombre ni datos clínicos) para estadísticas."
+                            texto = "Tus datos de salud son sensibles: se guardan en tu teléfono y nunca se venden. Solo si tú lo activas, se envía una copia anonimizada (sin tu nombre ni datos clínicos) para estadísticas. " +
+                                com.inacap.health.legal.TextosLegales.AVISO_ANTECEDENTES
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         PuntoConsentimiento(

@@ -120,6 +120,38 @@ class SyncManager(
         )
 
     /**
+     * Tarea 18d · Antecedentes (patologías, alergias, medicamentos) cifrados de extremo a extremo con
+     * la clave de Bienestar. Se envían aunque no se compartan estadísticas: la persona pidió atención.
+     * Reemplaza cualquier envío anterior aún pendiente. @return false si no hay cifrado disponible.
+     */
+    suspend fun enviarAntecedentes(perfil: com.inacap.health.data.Perfil?): Boolean {
+        if (!config.derivacionCifradaDisponible || sesion.modoEquipo) return false
+        val sobre = CifradoE2E.cifrar(com.inacap.health.salud.Antecedentes.json(perfil).toString(), config.bienestarClavePublica)
+        outbox.deletePorTabla(TABLA_ANTECEDENTES)
+        outbox.insert(
+            SyncPendiente(
+                destino = DESTINO_SQL, operacion = OP_UPSERT_EXPLICITO, tabla = TABLA_ANTECEDENTES,
+                registroId = UUID.randomUUID().toString(), payload = sobre.toString()
+            )
+        )
+        programar()
+        return true
+    }
+
+    /** Deja de compartir los antecedentes: se borra lo pendiente y, en la nube, lo ya enviado. */
+    suspend fun borrarAntecedentes() {
+        outbox.deletePorTabla(TABLA_ANTECEDENTES)
+        if (!config.sqlConfigurado || !sesion.tieneSesion) return
+        outbox.insert(
+            SyncPendiente(
+                destino = DESTINO_SQL, operacion = OP_UPSERT_EXPLICITO, tabla = TABLA_ANTECEDENTES,
+                registroId = UUID.randomUUID().toString(), payload = JSONObject().put("borrar", true).toString()
+            )
+        )
+        programar()
+    }
+
+    /**
      * HU-06 · Solicitud de derivación con datos de contacto, cifrada de extremo a extremo.
      * Se envía aunque no se compartan estadísticas: la persona pidió ser contactada.
      * @return false si no está configurado (sin base SQL o sin clave pública de Bienestar).
@@ -306,6 +338,10 @@ class SyncManager(
                             }
                             if (item.tabla == TABLA_USUARIOS) {
                                 // Ya se envió arriba con los datos actuales del perfil.
+                            } else if (item.tabla == TABLA_ANTECEDENTES) {
+                                val sobre = JSONObject(item.payload)
+                                if (sobre.optBoolean("borrar")) supabase.rpc("borrar_antecedentes")
+                                else supabase.rpc("guardar_antecedentes", JSONObject().put("p_cifrado", sobre))
                             } else if (item.operacion == OP_DELETE) {
                                 supabase.eliminar(item.tabla, item.registroId)
                             } else {
@@ -385,6 +421,7 @@ class SyncManager(
         const val TABLA_SCOFF = "resultados_scoff"
         const val TABLA_CONSENTIMIENTOS = "consentimientos"
         const val TABLA_DERIVACIONES = "derivaciones"
+        const val TABLA_ANTECEDENTES = "antecedentes_cifrados"
         const val COLECCION_EVENTOS = "eventos"
         const val MOTIVO_REVOCACION = "revocacion"
         const val MOTIVO_ELIMINACION = "eliminacion"

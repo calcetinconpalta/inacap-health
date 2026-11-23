@@ -30,6 +30,9 @@ interface SyncPendienteDao {
     @Query("DELETE FROM sync_pendiente WHERE operacion != :explicito")
     suspend fun deleteNoExplicitos(explicito: String)
 
+    @Query("DELETE FROM sync_pendiente WHERE tabla = :tabla")
+    suspend fun deletePorTabla(tabla: String)
+
     @Query("UPDATE sync_pendiente SET registroId = :nuevo WHERE tabla = :tabla AND registroId = :viejo")
     suspend fun cambiarRegistroId(tabla: String, viejo: String, nuevo: String)
 }

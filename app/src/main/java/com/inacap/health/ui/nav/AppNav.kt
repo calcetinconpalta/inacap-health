@@ -305,6 +305,10 @@ private fun AppNavContent(
                 )
             }
             composable(Routes.DERIVACION) {
+              com.inacap.health.ui.screens.bienestar.PuertaAntecedentesPantalla(
+                titulo = "Apoyo de Bienestar", onBack = { navController.volver() },
+                onVerMensajes = { navController.navigate(Routes.ATENCION) }
+              ) {
                 DerivacionScreen(
                     onSolicitudConfirmada = { canal, codigo, contacto ->
                         sync.enSegundoPlano {
@@ -321,6 +325,7 @@ private fun AppNavContent(
                     onVerMensajes = { navController.navigate(Routes.ATENCION) },
                     onBack = { navController.volver() }
                 )
+              }
             }
             composable(Routes.ATENCION) {
                 OrientacionScreen(

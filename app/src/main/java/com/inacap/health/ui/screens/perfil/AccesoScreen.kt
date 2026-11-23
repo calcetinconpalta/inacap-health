@@ -209,7 +209,7 @@ fun AccesoScreen(
                     CampoContrasena("Repite la contraseña", repetir) { repetir = it }
                     TextoSecundario("Al menos 8 caracteres, con letras y números.")
                     Tarjeta {
-                        TextoSecundario("Al crear una cuenta, tus registros (IMC, agua, pasos, pulso y puntaje SCOFF) se respaldan de forma segura asociados a tu correo para que puedas recuperarlos. Tu nombre, patologías, alergias, medicamentos y peso nunca se suben.")
+                        TextoSecundario("Al crear una cuenta, tus registros (IMC, agua, pasos, pulso y puntaje SCOFF) se respaldan de forma segura asociados a tu correo para que puedas recuperarlos. Tu nombre y tu peso nunca se suben; tus antecedentes de salud solo se comparten cifrados con Bienestar cuando pides atención.")
                     }
                     val valido = ReglasCuenta.emailValido(email) && ReglasCuenta.contrasenaValida(contrasena) && contrasena == repetir
                     Boton(if (ocupado) "Creando…" else "Crear cuenta", habilitado = valido && !ocupado) { ejecutar { repo.crearCuenta(email, contrasena) } }

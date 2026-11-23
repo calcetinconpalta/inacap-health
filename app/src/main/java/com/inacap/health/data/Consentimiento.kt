@@ -25,4 +25,6 @@ object TipoConsentimiento {
     const val MAYORIA_EDAD = "mayoria_edad"
     const val NUBE = "nube"
     const val ORIENTACION = "orientacion"
+    /** 1.3.3: compartir antecedentes cifrados con Bienestar (obligatorio para consultar). */
+    const val ANTECEDENTES = "antecedentes"
 }

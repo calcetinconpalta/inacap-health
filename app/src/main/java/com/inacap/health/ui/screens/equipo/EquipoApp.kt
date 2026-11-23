@@ -348,7 +348,7 @@ private fun ChatEquipo(repo: EquipoRepositorio, rol: RolEquipo, id: String, conv
                 }
             }
             Text(
-                if (rol == RolEquipo.PROFESIONAL) "Atención confidencial: solo tú y la persona ven esta conversación."
+                if (rol == RolEquipo.PROFESIONAL) "Atención confidencial: solo tú y la persona ven esta conversación. No indiques ni sugieras medicamentos por chat."
                 else "Solo orientación educativa: sin diagnósticos, dietas ni tratamientos. Ante señales de TCA o riesgo, deriva.",
                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp)
             )
@@ -403,6 +403,10 @@ private fun CuentaEquipo(repo: EquipoRepositorio, rol: RolEquipo, onSalir: () ->
             TextoSecundario("• Lo que ves es confidencial: no lo compartas ni hagas capturas.")
             TextoSecundario("• No pidas datos que identifiquen a la persona si no son necesarios.")
             TextoSecundario(if (rol == RolEquipo.PROFESIONAL) "• Si detectas riesgo vital, sigue el protocolo de urgencia de tu institución." else "• Ante señales de TCA o de riesgo, deriva a un profesional.")
+            if (rol == RolEquipo.PROFESIONAL) {
+                TextoSecundario("• No indiques ni sugieras medicamentos por chat. Los antecedentes (patologías, alergias, medicamentos) sirven para orientar con seguridad y saber cuándo derivar a un médico.")
+                TextoSecundario("• Los antecedentes llegan cifrados: se leen en el panel web con la clave de Bienestar.")
+            }
         }
         val contexto = androidx.compose.ui.platform.LocalContext.current
         val oscuro = com.inacap.health.ui.theme.temaOscuroActivo()

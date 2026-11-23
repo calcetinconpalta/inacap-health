@@ -144,7 +144,10 @@ class PerfilViewModel(application: Application) : AndroidViewModel(application) 
                 sync.activarNube()
                 sync.registrarEvento("nube_activada")
             } else {
-                // Al revocar se deja de enviar y se borra lo que ya estaba en la nube.
+                // Al revocar se deja de enviar y se borra lo que ya estaba en la nube
+                // (también los antecedentes: se volverán a pedir en la próxima consulta).
+                com.inacap.health.salud.Antecedentes.marcarAceptado(app, false)
+                app.database.syncPendienteDao().deletePorTabla(SyncManager.TABLA_ANTECEDENTES)
                 sync.desactivarNube(SyncManager.MOTIVO_REVOCACION)
             }
         }
@@ -177,6 +180,8 @@ class PerfilViewModel(application: Application) : AndroidViewModel(application) 
             perfilDao.upsertPerfil(nuevoPerfil)
             // Solo viajan el rango de edad, el sexo y la sede (nunca el nombre ni datos clínicos).
             sync.encolarActualizacionUsuario()
+            // Antecedentes: si la persona aceptó compartirlos con Bienestar, se actualizan (cifrados).
+            if (com.inacap.health.salud.Antecedentes.aceptado(app)) sync.enviarAntecedentes(nuevoPerfil)
             onComplete()
         }
     }
@@ -206,7 +211,24 @@ class PerfilViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    /** Tarea 18d: la persona acepta compartir sus antecedentes (con lo que escribió en el formulario). */
+    fun aceptarAntecedentes(patologias: String, alergias: String, medicamentos: String, onListo: (enviado: Boolean) -> Unit) {
+        viewModelScope.launch {
+            val actual = perfilDao.getPerfilUnaVez() ?: Perfil(
+                id = 1, nombre = "", edad = null, sexo = "", patologias = "", alergias = "", medicamentos = "", consentimiento = true
+            )
+            val nuevo = actual.copy(
+                patologias = patologias.trim().take(300), alergias = alergias.trim().take(300), medicamentos = medicamentos.trim().take(300)
+            )
+            perfilDao.upsertPerfil(nuevo)
+            consentimientoDao.insert(Consentimiento(tipo = TipoConsentimiento.ANTECEDENTES, version = TextosLegales.VERSION, aceptado = true))
+            com.inacap.health.salud.Antecedentes.marcarAceptado(app, true)
+            onListo(sync.enviarAntecedentes(nuevo))
+        }
+    }
+
     private suspend fun borrarLocal() {
+        com.inacap.health.salud.Antecedentes.marcarAceptado(app, false)
         perfilDao.deleteAll()
         registroBiometricoDao.deleteAll()
         resultadoScoffDao.deleteAll()

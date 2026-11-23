@@ -125,9 +125,11 @@ fun PrivacidadScreen(
 
             // --- Qué se guarda ---
             Tarjeta(titulo = "Qué se guarda") {
-                FilaDato("Nombre, patologías, alergias, medicamentos", "Solo en tu teléfono")
+                FilaDato("Nombre", "Solo en tu teléfono")
+                FilaDato("Patologías, alergias, medicamentos", "Cifrados · solo Bienestar, al pedir atención")
                 FilaDato("Peso y estatura", "Solo en tu teléfono")
-                FilaDato("Respuestas del test SCOFF", "Solo en tu teléfono")
+                FilaDato("Respuestas de los cuestionarios", "Solo en tu teléfono")
+                FilaDato("¿Cómo te sientes hoy? (ánimo diario)", "Solo en tu teléfono")
                 FilaDato("Imágenes de la cámara (pulso)", "Nunca se guardan")
                 FilaDato("IMC, agua, pasos, pulso y puntaje SCOFF", "En tu teléfono · anónimo si compartes")
                 FilaDato("Uso de la app", "Solo si compartes, anónimo")

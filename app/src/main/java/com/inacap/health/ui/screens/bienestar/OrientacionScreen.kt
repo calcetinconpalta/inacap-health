@@ -182,7 +182,8 @@ fun OrientacionScreen(
                 }
                 !aceptado -> Consentimiento { vm.aceptar(); aceptado = true }
                 abierta != null -> Conversacion(vm, abierta!!, onNavigateToDerivacion)
-                nueva -> NuevaConsulta(vm, onNavigateToDerivacion) { id -> nueva = false; abierta = id }
+                // Tarea 18d: antes de la primera consulta se piden los antecedentes (cifrados para Bienestar).
+                nueva -> PuertaAntecedentes { NuevaConsulta(vm, onNavigateToDerivacion) { id -> nueva = false; abierta = id } }
                 else -> Lista(vm, soloAtencion, onAbrir = { abierta = it }, onNueva = { nueva = true }, onBorrado = { aceptado = false })
             }
             error?.let {

@@ -1,6 +1,6 @@
 # Términos y Condiciones y Política de Privacidad — INACAP Health
 
-Versión 3, vigente desde el 19 de noviembre de 2026.
+Versión 4, vigente desde el 23 de noviembre de 2026.
 
 > Generado desde `app/src/main/java/com/inacap/health/legal/TextosLegales.kt` (lo que ve la persona en la app). Borrador académico: debe revisarlo un abogado o la Dirección Jurídica de INACAP antes de publicar.
 
@@ -38,6 +38,10 @@ El pulso medido con la cámara es una estimación aproximada y puede fallar; no 
 
 La orientación entre pares la entregan estudiantes de Nutrición supervisados por docentes: es educativa y no reemplaza la atención profesional.
 
+El equipo de Bienestar está formado por estudiantes de medicina en práctica, supervisados por docentes. No indican ni sugieren medicamentos por chat: usan tus antecedentes para orientarte con seguridad y para saber cuándo derivarte a un médico.
+
+Los cuestionarios de Bienestar (WHO-5, PHQ-2, PHQ-9, GAD-2, GAD-7, PSS-10, AUDIT-C e IPAQ) no son un diagnóstico: son una orientación para tu autocuidado.
+
 Si pides que Bienestar Estudiantil te contacte, la app envía tu solicitud cifrada; el equipo de Bienestar decide cómo y cuándo responder según su disponibilidad.
 
 ### 6. Cambios a estos términos
@@ -52,7 +56,7 @@ Estos términos se rigen por las leyes de la República de Chile, en especial la
 
 ### 1. Datos que tratamos
 
-Perfil: nombre, edad, sexo, patologías, alergias y medicamentos (todos opcionales).
+Perfil: nombre, edad, sexo, sede INACAP, patologías, alergias y medicamentos (todos opcionales). La sede se elige de una lista: no usamos tu ubicación ni pedimos tu dirección.
 
 Registros de salud: peso, estatura, IMC, consumo de agua y resultados del cuestionario SCOFF.
 
@@ -74,11 +78,13 @@ Los datos de la app no se copian a los respaldos automáticos de Google.
 
 Si activas "Compartir datos anonimizados", se envía una copia reducida a servidores del proyecto, para generar estadísticas de bienestar estudiantil y mejorar la app:
 
-• Registros: rango de edad (por ejemplo 18-24), sexo, IMC y su rango de referencia, vasos de agua, pasos diarios, pulso, puntaje SCOFF, solicitudes de derivación y tus consentimientos.
+• Registros: rango de edad (por ejemplo 18-24), sexo, sede INACAP, IMC y su rango de referencia, vasos de agua, pasos diarios, pulso, puntaje del SCOFF y de los demás cuestionarios de Bienestar, solicitudes de derivación y tus consentimientos.
 
 • Uso de la app: pantallas visitadas, funciones usadas y errores técnicos.
 
-NUNCA se envían tu nombre, patologías, alergias, medicamentos, peso, estatura ni tus respuestas individuales del SCOFF.
+NUNCA se envían tu nombre, peso, estatura, tu ánimo diario ni tus respuestas individuales del SCOFF o de los otros cuestionarios.
+
+Tus antecedentes de salud se comparten cifrados solo con el equipo que te atiende, cuando pides atención. Nunca se venden, publican ni usan para estadísticas.
 
 Se te identifica con un código aleatorio, sin correo ni teléfono, salvo que crees una cuenta con correo. Aun así, la ley considera estos datos como personales (seudonimizados), por eso te pedimos permiso.
 
@@ -88,6 +94,8 @@ Para alojar estos datos usamos proveedores de servicios en la nube que pueden te
 
 • Derivación con contacto: si pides que Bienestar Estudiantil te contacte, tu nombre, medio de contacto y mensaje se cifran en tu teléfono con la clave de Bienestar (cifrado de extremo a extremo). Solo ese equipo puede leerlos; ni los servidores ni los administradores pueden.
 
+• Antecedentes de salud: para pedir orientación o apoyo debes compartir tus patologías, alergias y medicamentos. Se cifran en tu teléfono con la clave de Bienestar (cifrado de extremo a extremo): solo ese equipo puede leerlos; ni los servidores ni los administradores pueden. Se envían al pedir atención y cada vez que los editas, y se borran si revocas tu consentimiento o eliminas tus datos. No son obligatorios para usar el resto de la app.
+
 • Orientación entre pares: tus mensajes se guardan con tu código anónimo y los leen el tutor par asignado y los docentes supervisores. Puedes borrar tus conversaciones cuando quieras.
 
 • Atención de Bienestar: si alguien del equipo de Bienestar (estudiantes de medicina en práctica supervisada) responde tu solicitud, esa conversación solo la ven tú y esa persona (no los tutores ni los docentes).
@@ -96,7 +104,9 @@ Para alojar estos datos usamos proveedores de servicios en la nube que pueden te
 
 • Health Connect: si lo vinculas, la app solo LEE tus pasos y frecuencia cardíaca; nunca escribe ni borra nada allí. Puedes desvincularlo en cualquier momento.
 
-• Resumen PDF: se genera en tu teléfono solo cuando lo pides y tú decides con quién compartirlo.
+• Resumen PDF: se genera en tu teléfono solo cuando lo pides y tú decides con quién compartirlo. Con «Enviar a Bienestar» se abre tu app de correo con el PDF adjunto: el correo sale desde tu cuenta.
+
+• ¿Cómo te sientes hoy?: tu respuesta diaria se guarda solo en tu teléfono.
 
 • Cuenta con correo (opcional): si la creas, tus registros respaldados (IMC, agua, pasos, pulso y puntaje SCOFF) quedan asociados a tu correo para que puedas recuperarlos en otro teléfono. Tu contraseña se guarda cifrada y nadie del equipo puede verla. Al cerrar sesión se borran los datos de ese teléfono; al eliminar tus datos se borra también la cuenta.
 
@@ -108,7 +118,7 @@ No vendemos, arrendamos ni cedemos tus datos. No los usamos para publicidad.
 
 ### 5. Quién puede verlos
 
-Los datos de tu teléfono: solo tú (puedes protegerlos con PIN o huella). Los datos anonimizados: los administradores del proyecto, solo como estadísticas. Las conversaciones de orientación: el tutor asignado y los docentes supervisores. Las conversaciones de atención y las derivaciones con contacto: solo Bienestar Estudiantil.
+Los datos de tu teléfono: solo tú (puedes protegerlos con PIN o huella). Los datos anonimizados: los administradores del proyecto, solo como estadísticas. Las conversaciones de orientación: el tutor asignado y los docentes supervisores. Las conversaciones de atención, las derivaciones con contacto y tus antecedentes de salud: solo Bienestar Estudiantil.
 
 ### 6. Cuánto tiempo los guardamos
 
