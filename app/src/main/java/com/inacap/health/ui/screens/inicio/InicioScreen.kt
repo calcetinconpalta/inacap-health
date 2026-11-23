@@ -1,5 +1,6 @@
 package com.inacap.health.ui.screens.inicio
 
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -346,6 +347,13 @@ private fun TarjetaPasos(saludViewModel: SaludViewModel, onNavigate: (String) ->
     ) { ok -> permiso = ok; if (ok) saludViewModel.actualizarPasos() }
 
     LaunchedEffect(permiso) { if (permiso) saludViewModel.actualizarPasos() }
+    // Pasos en vivo: escucha el sensor solo mientras Inicio está a la vista (se detiene al
+    // salir de la pantalla o al dejar la app en segundo plano).
+    val ciclo = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(permiso) {
+        if (permiso) ciclo.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) { saludViewModel.pasosEnVivo() }
+    }
+    var avisoBateria by remember { mutableStateOf(com.inacap.health.salud.AhorroBateria.mostrarAviso(context)) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -406,6 +414,16 @@ private fun TarjetaPasos(saludViewModel: SaludViewModel, onNavigate: (String) ->
                         if (pasos >= meta) "¡Meta cumplida! Cada paso suma a tu bienestar." else "Moverte un poco durante la jornada también cuenta.",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (avisoBateria) {
+                        Text(
+                            "Con la app abierta los pasos se cuentan en vivo. En este teléfono, para que sigan contando con la app cerrada, quita INACAP Health del ahorro de batería.",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            androidx.compose.material3.TextButton(onClick = { com.inacap.health.salud.AhorroBateria.abrirAjustes(context) }) { Text("Abrir ajustes") }
+                            androidx.compose.material3.TextButton(onClick = { avisoBateria = false }) { Text("Ahora no") }
+                        }
+                    }
                 }
             }
         }

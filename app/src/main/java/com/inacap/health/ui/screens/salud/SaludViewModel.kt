@@ -81,6 +81,9 @@ class SaludViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** Escucha el sensor mientras quien llama siga activo (Inicio a la vista). */
+    suspend fun pasosEnVivo() = app.pasos.escucharEnVivo()
+
     val nivelActividadGuardado: String
         get() = sharedPrefs.getString("nivel_actividad", "Moderado") ?: "Moderado"
 

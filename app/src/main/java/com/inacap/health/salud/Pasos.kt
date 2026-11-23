@@ -19,7 +19,13 @@ import com.inacap.health.HealthApp
 import com.inacap.health.data.AppDatabase
 import com.inacap.health.data.PasosDia
 import com.inacap.health.data.sync.SyncManager
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -29,6 +35,9 @@ import kotlin.coroutines.resume
 
 /** Cálculos puros (probados en la JVM). */
 object CalculoPasos {
+    /** Cada cuánto se guardan los pasos mientras se escucha en vivo. */
+    const val CADA_MS_EN_VIVO = 2_000L
+
     const val META_POR_DEFECTO = 6000
     val METAS = listOf(4000, 6000, 8000, 10000)
 
@@ -47,6 +56,30 @@ object CalculoPasos {
 
     fun fecha(ms: Long = System.currentTimeMillis()): String =
         SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(ms))
+}
+
+/**
+ * Marcas que suelen cerrar las apps en segundo plano: el conteo y la sincronización se pausan
+ * si la app no está excluida del ahorro de batería (ver dontkillmyapp.com).
+ */
+object AhorroBateria {
+    private val AGRESIVAS = setOf("xiaomi", "redmi", "poco", "huawei", "honor", "oppo", "realme", "vivo", "oneplus", "meizu", "asus", "samsung")
+
+    fun marcaAgresiva(fabricante: String = Build.MANUFACTURER): Boolean = fabricante.trim().lowercase() in AGRESIVAS
+
+    /** ¿Conviene mostrar el aviso? Solo en marcas agresivas y si la app aún no está excluida. */
+    fun mostrarAviso(context: Context): Boolean {
+        if (!marcaAgresiva()) return false
+        val pm = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager ?: return false
+        return !pm.isIgnoringBatteryOptimizations(context.packageName)
+    }
+
+    /** Abre la lista de optimización de batería del sistema (no requiere permisos especiales). */
+    fun abrirAjustes(context: Context) {
+        val lista = android.content.Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+        runCatching { context.startActivity(lista) }
+            .onFailure { runCatching { context.startActivity(android.content.Intent(android.provider.Settings.ACTION_SETTINGS)) } }
+    }
 }
 
 /** HU-10 · Pasos diarios desde el contador del teléfono. */
@@ -72,7 +105,36 @@ class PasosRepositorio(
     /** Lee el sensor una vez y suma los pasos nuevos al día de hoy. */
     suspend fun muestrear() {
         if (!tieneSensor || !tienePermiso) return
-        val actual = leerSensor() ?: return
+        aplicarLectura(leerSensor() ?: return, sincronizar = true)
+    }
+
+    /**
+     * Pasos en vivo mientras Inicio está a la vista: escucha el sensor hasta que se cancela la
+     * corrutina (al salir de la pantalla). Guarda como máximo cada [CalculoPasos.CADA_MS_EN_VIVO]
+     * y sube a la nube una sola vez al terminar, para no llenar la bandeja con cada paso.
+     */
+    suspend fun escucharEnVivo() {
+        if (!tieneSensor || !tienePermiso) return
+        val sm = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager ?: return
+        val sensor = sm.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) ?: return
+        val lecturas = callbackFlow {
+            val escucha = object : SensorEventListener {
+                override fun onSensorChanged(e: SensorEvent) { trySend(e.values[0].toLong()) }
+                override fun onAccuracyChanged(s: Sensor?, a: Int) = Unit
+            }
+            sm.registerListener(escucha, sensor, SensorManager.SENSOR_DELAY_UI)
+            awaitClose { sm.unregisterListener(escucha) }
+        }.conflate()   // el contador es acumulado: saltarse lecturas intermedias no pierde pasos
+        try {
+            lecturas.collect { aplicarLectura(it, sincronizar = false); delay(CalculoPasos.CADA_MS_EN_VIVO) }
+        } finally {
+            withContext(NonCancellable) {
+                db.pasosDiaDao().get(CalculoPasos.fecha())?.let { sync.encolarPasos(it) }
+            }
+        }
+    }
+
+    private suspend fun aplicarLectura(actual: Long, sincronizar: Boolean) {
         val anterior = if (prefs.contains("ultimo_contador")) prefs.getLong("ultimo_contador", 0) else null
         val delta = CalculoPasos.delta(anterior, actual)
         val hoy = CalculoPasos.fecha()
@@ -82,13 +144,13 @@ class PasosRepositorio(
             putString("sensor_fecha", hoy)
             putInt("sensor_pasos", sensorHoy)
         }
-        if (delta > 0 || anterior == null) guardar(hoy, sensorHoy, "sensor")
+        if (delta > 0 || anterior == null) guardar(hoy, sensorHoy, "sensor", sincronizar)
     }
 
     /** Pasos que llegan desde Health Connect (HU-07). */
     suspend fun registrarExterno(fecha: String, pasos: Int) = guardar(fecha, pasos, "health_connect")
 
-    private suspend fun guardar(fecha: String, pasos: Int, fuente: String) {
+    private suspend fun guardar(fecha: String, pasos: Int, fuente: String, sincronizar: Boolean = true) {
         val dao = db.pasosDiaDao()
         val existente = dao.get(fecha)
         if (existente != null && existente.pasos >= pasos) return
@@ -99,7 +161,7 @@ class PasosRepositorio(
             uuid = existente?.uuid ?: java.util.UUID.randomUUID().toString()
         )
         dao.upsert(dia)
-        sync.encolarPasos(dia)
+        if (sincronizar) sync.encolarPasos(dia)
     }
 
     private suspend fun leerSensor(): Long? {
