@@ -47,6 +47,11 @@ fun SeguridadScreen(onBack: () -> Unit, onConfigurarBloqueo: () -> Unit) {
                     OutlinedButton(onClick = onConfigurarBloqueo) { Text("Activar bloqueo", color = MaterialTheme.colorScheme.onSurface) }
                 }
             }
+            Tarjeta(titulo = "Qué protege cada cosa") {
+                TextoSecundario("• El PIN y la huella bloquean la pantalla: evitan que otra persona abra la app en tu teléfono.")
+                TextoSecundario("• Tus datos se cifran aparte, con una clave que guarda el propio teléfono. Ese cifrado funciona aunque no tengas PIN y no depende de él.")
+                TextoSecundario("• Quien conozca tu PIN puede abrir la app y ver tus datos: usa uno difícil de adivinar y no lo compartas. Si lo olvidas no se puede recuperar; tendrías que borrar los datos de la app.")
+            }
             Tarjeta(titulo = "Cuando la app se conecta") {
                 FilaValor("Conexiones", "Siempre seguras y cifradas")
                 FilaValor(
