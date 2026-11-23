@@ -1,5 +1,6 @@
 package com.inacap.health.ui.screens.inicio
 
+import com.inacap.health.data.datosCompletos
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Canvas
@@ -92,6 +93,11 @@ fun InicioScreen(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+
+        // Tarea 14: si faltan datos (o se omitieron al crear la cuenta), se invita a completarlos.
+        if (perfilState != null && !perfilState.datosCompletos()) {
+            AvisoCompletarDatos(onCompletar = { onNavigate(Routes.PERFIL_DATOS) })
         }
 
         // Tarjeta Agua
@@ -336,6 +342,24 @@ fun InicioScreen(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+/** «Completa tus datos para recomendaciones personalizadas → Completar». Desaparece al completarlos. */
+@Composable
+internal fun AvisoCompletarDatos(onCompletar: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onCompletar),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "Completa tus datos para recomendaciones personalizadas",
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f)
+            )
+            androidx.compose.material3.TextButton(onClick = onCompletar) { Text("Completar →") }
+        }
     }
 }
 

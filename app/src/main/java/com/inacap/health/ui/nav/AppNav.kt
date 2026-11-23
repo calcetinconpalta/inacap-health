@@ -1,5 +1,6 @@
 package com.inacap.health.ui.nav
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -163,7 +164,8 @@ private fun AppNavContent(
     // subpantallas no había forma de volver a Inicio). Se oculta en la bienvenida.
     val enBienvenida = currentRoute == Routes.ONBOARDING ||
         (currentRoute == Routes.TERMINOS && navController.previousBackStackEntry?.destination?.route == Routes.ONBOARDING)
-    val showBottomBar = currentRoute != null && !enBienvenida && currentRoute != Routes.ACCESO_INICIAL && currentRoute != Routes.EQUIPO_ACCESO
+    val showBottomBar = currentRoute != null && !enBienvenida && currentRoute != Routes.ACCESO_INICIAL &&
+        currentRoute != Routes.EQUIPO_ACCESO && currentRoute != Routes.PERFIL_DATOS_NUEVA_CUENTA
     val pestanaActual = pestanaDe(currentRoute)
 
     // Base NoSQL: qué pantallas se usan (solo si el usuario aceptó compartir).
@@ -196,6 +198,12 @@ private fun AppNavContent(
             }
         }
     ) { innerPadding ->
+        // Atrás del teléfono en una pantalla que quedó sola en la pila (no es Inicio ni la bienvenida):
+        // vuelve a Inicio. Desde Inicio (raíz) no se intercepta: el sistema cierra la app normalmente.
+        BackHandler(enabled = currentRoute != null && currentRoute != Routes.INICIO && !enBienvenida &&
+            currentRoute != Routes.ACCESO_INICIAL && navBackStackEntry != null && navController.previousBackStackEntry == null) {
+            navController.volver()
+        }
         NavHost(
             navController = navController,
             startDestination = startDestination,
@@ -224,12 +232,12 @@ private fun AppNavContent(
                     desdeBienvenida = false,
                     inicioSesion = true,
                     permitirEstudiante = false,
-                    onListo = { navController.popBackStack() },
-                    onBack = { navController.popBackStack() }
+                    onListo = { navController.volver() },
+                    onBack = { navController.volver() }
                 )
             }
             composable(Routes.TERMINOS) {
-                TerminosScreen(onBack = { navController.popBackStack() })
+                TerminosScreen(onBack = { navController.volver() })
             }
 
             // Pestañas principales
@@ -269,31 +277,31 @@ private fun AppNavContent(
             composable(Routes.IMC_AGUA) {
                 CalculadorasScreen(
                     saludViewModel = saludViewModel,
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.volver() }
                 )
             }
             composable(Routes.HISTORIAL) {
                 HistorialScreen(
                     onNavigate = { route -> navController.navigate(route) },
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.volver() }
                 )
             }
             composable(Routes.PULSO) {
-                PulsoScreen(onBack = { navController.popBackStack() })
+                PulsoScreen(onBack = { navController.volver() })
             }
-            composable(Routes.APARIENCIA) { AparienciaScreen(onBack = { navController.popBackStack() }) }
+            composable(Routes.APARIENCIA) { AparienciaScreen(onBack = { navController.volver() }) }
             composable(Routes.HEALTH_CONNECT) {
-                HealthConnectScreen(onBack = { navController.popBackStack() })
+                HealthConnectScreen(onBack = { navController.volver() })
             }
             composable(Routes.RESUMEN_PDF) {
-                ResumenPdfScreen(onBack = { navController.popBackStack() })
+                ResumenPdfScreen(onBack = { navController.volver() })
             }
 
             // Subrutas Bienestar
             composable(Routes.SCOFF) {
                 ScoffScreen(
                     onNavigateToDerivacion = { navController.navigate(Routes.DERIVACION) },
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.volver() }
                 )
             }
             composable(Routes.DERIVACION) {
@@ -311,32 +319,32 @@ private fun AppNavContent(
                         }
                     },
                     onVerMensajes = { navController.navigate(Routes.ATENCION) },
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.volver() }
                 )
             }
             composable(Routes.ATENCION) {
                 OrientacionScreen(
-                    onNavigateToDerivacion = { navController.popBackStack() },
-                    onBack = { navController.popBackStack() },
+                    onNavigateToDerivacion = { navController.volver() },
+                    onBack = { navController.volver() },
                     soloAtencion = true
                 )
             }
             composable(Routes.EDUCATIVO) {
                 EducativoScreen(
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.volver() }
                 )
             }
             composable(Routes.ORIENTACION) {
                 OrientacionScreen(
                     onNavigateToDerivacion = { navController.navigate(Routes.DERIVACION) },
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.volver() }
                 )
             }
             composable(Routes.PH_VIDEOLAMADA) {
                 PlaceholderScreen(
                     titulo = "Videollamadas y diagnóstico automático",
                     descripcion = "Las videollamadas con nutricionistas y el diagnóstico clínico automatizado quedaron descartados: la app es un primer filtro orientador y nunca emite diagnósticos.",
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.volver() }
                 )
             }
 
@@ -344,18 +352,24 @@ private fun AppNavContent(
             composable(Routes.PERFIL_DATOS) {
                 PerfilDatosScreen(
                     viewModel = perfilViewModel,
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.volver() }
                 )
+            }
+            composable(Routes.PERFIL_DATOS_NUEVA_CUENTA) {
+                // Tras crear la cuenta: completar datos u omitir, y a Inicio.
+                val irAInicio = { navController.navigate(Routes.INICIO) { popUpTo(0) { inclusive = true } } }
+                BackHandler { irAInicio() }
+                PerfilDatosScreen(viewModel = perfilViewModel, onBack = { irAInicio() }, recienCreada = true)
             }
             composable(Routes.RECORDATORIOS) {
                 RecordatoriosScreen(
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.volver() }
                 )
             }
             composable(Routes.PRIVACIDAD) {
                 PrivacidadScreen(
                     viewModel = perfilViewModel,
-                    onBack = { navController.popBackStack() },
+                    onBack = { navController.volver() },
                     onVerTerminos = { navController.navigate(Routes.TERMINOS) },
                     onDataDeleted = {
                         navController.navigate(Routes.ONBOARDING) {
@@ -365,17 +379,17 @@ private fun AppNavContent(
                 )
             }
             composable(Routes.BLOQUEO) {
-                BloqueoConfigScreen(onBack = { navController.popBackStack() })
+                BloqueoConfigScreen(onBack = { navController.volver() })
             }
             composable(Routes.SEGURIDAD) {
                 SeguridadScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = { navController.volver() },
                     onConfigurarBloqueo = { navController.navigate(Routes.BLOQUEO) }
                 )
             }
             composable(Routes.CUENTA) {
                 CuentaScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = { navController.volver() },
                     onAcceso = { navController.navigate(Routes.ACCESO) },
                     onIniciarSesion = { navController.navigate(Routes.ACCESO_SESION) },
                     onCerrarSesion = {
@@ -388,24 +402,37 @@ private fun AppNavContent(
             composable(Routes.ACCESO) {
                 AccesoScreen(
                     desdeBienvenida = false,
-                    onListo = { navController.popBackStack() },
-                    onBack = { navController.popBackStack() }
+                    onListo = { navController.volver() },
+                    onCuentaCreada = { navController.navigate(Routes.PERFIL_DATOS_NUEVA_CUENTA) { popUpTo(0) { inclusive = true } } },
+                    onBack = { navController.volver() }
                 )
             }
             composable(Routes.ACCESO_SESION) {
                 AccesoScreen(
                     desdeBienvenida = false,
                     inicioSesion = true,
-                    onListo = { navController.popBackStack() },
-                    onBack = { navController.popBackStack() }
+                    onListo = { navController.volver() },
+                    onBack = { navController.volver() }
                 )
             }
             composable(Routes.ACCESO_INICIAL) {
                 val irAInicio = { navController.navigate(Routes.INICIO) { popUpTo(0) { inclusive = true } } }
-                AccesoScreen(desdeBienvenida = true, onListo = { irAInicio() }, onBack = { irAInicio() })
+                AccesoScreen(
+                    desdeBienvenida = true, onListo = { irAInicio() }, onBack = { irAInicio() },
+                    onCuentaCreada = { navController.navigate(Routes.PERFIL_DATOS_NUEVA_CUENTA) { popUpTo(0) { inclusive = true } } }
+                )
             }
         }
     }
+}
+
+/**
+ * «Atrás» seguro (tarea 17): nunca deja el NavHost sin pantalla (se veía negro al apretar atrás
+ * varias veces seguidas). Si no hay a dónde volver, va a Inicio.
+ */
+internal fun NavHostController.volver() {
+    if (previousBackStackEntry != null) popBackStack()
+    else if (currentDestination?.route != Routes.INICIO) navigate(Routes.INICIO) { popUpTo(0) { inclusive = true } }
 }
 
 /** A qué pestaña pertenece cada pantalla (para resaltarla en la barra inferior). */

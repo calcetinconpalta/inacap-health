@@ -54,7 +54,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun PerfilDatosScreen(
     viewModel: PerfilViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    /** Recién creada la cuenta: se muestra «Omitir» y, al guardar, se sigue con [onBack]. */
+    recienCreada: Boolean = false
 ) {
     val perfil by viewModel.perfil.collectAsState()
 
@@ -102,7 +104,7 @@ fun PerfilDatosScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Mis datos",
+                        text = if (recienCreada) "Completa tus datos" else "Mis datos",
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
                     )
@@ -302,7 +304,8 @@ fun PerfilDatosScreen(
                             alergias = sanitizedAlergias,
                             medicamentos = sanitizedMedicamentos,
                             onComplete = {
-                                scope.launch {
+                                if (recienCreada) onBack()
+                                else scope.launch {
                                     snackbarHostState.showSnackbar("Datos guardados")
                                 }
                             }
@@ -321,6 +324,12 @@ fun PerfilDatosScreen(
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
+            }
+
+            if (recienCreada) {
+                androidx.compose.material3.TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+                    Text("Omitir por ahora", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
 
             Spacer(modifier = Modifier.height(4.dp))

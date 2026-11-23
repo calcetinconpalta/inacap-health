@@ -27,6 +27,8 @@ object Routes {
 
     // Subrutas Perfil
     const val PERFIL_DATOS = "perfil_datos"
+    /** «Mis datos» justo después de crear la cuenta (con «Omitir»). */
+    const val PERFIL_DATOS_NUEVA_CUENTA = "perfil_datos_nueva_cuenta"
     const val RECORDATORIOS = "recordatorios"
     const val PRIVACIDAD = "privacidad"
     const val BLOQUEO = "bloqueo"

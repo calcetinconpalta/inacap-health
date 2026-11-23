@@ -72,6 +72,8 @@ import kotlinx.coroutines.launch
 fun AccesoScreen(
     desdeBienvenida: Boolean,
     onListo: () -> Unit,
+    /** Tras CREAR una cuenta (no al iniciar sesión): por defecto, lo mismo que [onListo]. */
+    onCuentaCreada: () -> Unit = onListo,
     onBack: () -> Unit,
     repositorio: CuentaRepositorio? = null,
     inicioSesion: Boolean = false,
@@ -99,7 +101,7 @@ fun AccesoScreen(
         ocupado = true; mensaje = null
         scope.launch {
             when (val r = accion()) {
-                ResultadoCuenta.Listo -> { contrasena = ""; repetir = ""; onListo() }
+                ResultadoCuenta.Listo -> { contrasena = ""; repetir = ""; onCuentaCreada() }
                 is ResultadoCuenta.ConfirmaCorreo -> pendiente = r.email
                 is ResultadoCuenta.Error -> mensaje = r.mensaje
             }
@@ -146,7 +148,7 @@ fun AccesoScreen(
                     ciclo.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
                         if (!ocupado && ReglasCuenta.contrasenaValida(contrasena)) {
                             when (repo.completarRegistro(contrasena)) {
-                                ResultadoCuenta.Listo -> { contrasena = ""; repetir = ""; onListo() }
+                                ResultadoCuenta.Listo -> { contrasena = ""; repetir = ""; onCuentaCreada() }
                                 else -> Unit   // aún no confirma: no se molesta con mensajes
                             }
                         }

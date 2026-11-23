@@ -16,6 +16,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.testing.WorkManagerTestInitHelper
 import com.inacap.health.data.Perfil
+import com.inacap.health.data.datosCompletos
 import com.inacap.health.legal.TextosLegales
 import com.inacap.health.ui.nav.AppNav
 import com.inacap.health.ui.screens.perfil.PerfilViewModel
@@ -65,6 +66,40 @@ class NavegacionTest {
         compose.onRoot().printToLog("ARBOL")
         println(compose.onRoot().fetchSemanticsNode().config)
         error("No apareció '$esperar'")
+    }
+
+    @Test fun atrasMuchasVecesNuncaDejaLaPantallaNegra() {
+        conPerfil(); abrir()
+        tab("Salud")
+        compose.onNodeWithText("Historial").performClick(); compose.waitForIdle()
+        // Varios toques seguidos en la flecha «Atrás» y en el atrás del teléfono.
+        repeat(3) {
+            compose.onAllNodesWithContentDescription("Atrás").fetchSemanticsNodes().firstOrNull()?.let {
+                compose.onAllNodesWithContentDescription("Atrás")[0].performClick()
+            }
+            compose.waitForIdle()
+        }
+        compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.waitForIdle()
+        enInicio()
+    }
+
+    @Test fun datosCompletosParaRecomendaciones() {
+        val base = Perfil(nombre = "", edad = null, sexo = "", patologias = "", alergias = "", medicamentos = "", consentimiento = true)
+        org.junit.Assert.assertFalse(base.datosCompletos())
+        org.junit.Assert.assertFalse((null as Perfil?).datosCompletos())
+        org.junit.Assert.assertTrue(base.copy(edad = 21, sexo = "Femenino").datosCompletos())
+    }
+
+    @Test fun inicioPideCompletarDatosSiFaltan() {
+        runBlocking(Dispatchers.IO) {
+            app.database.perfilDao().upsertPerfil(
+                Perfil(nombre = "Ana", edad = null, sexo = "", patologias = "", alergias = "", medicamentos = "",
+                    consentimiento = true, terminosVersion = TextosLegales.VERSION)
+            )
+        }
+        abrir()
+        compose.onNodeWithText("Completa tus datos para recomendaciones personalizadas").assertIsDisplayed()
     }
 
     @Test fun inicioVuelveDesdeOtraPestana() {

@@ -25,3 +25,9 @@ data class Perfil(
     @ColumnInfo(defaultValue = "0")
     val compartirNube: Boolean = false
 )
+
+/**
+ * ¿Tiene lo necesario para recomendaciones personalizadas? Si no, Inicio muestra
+ * «Completa tus datos…» (tarea 14).
+ */
+fun Perfil?.datosCompletos(): Boolean = this != null && edad != null && sexo.isNotBlank()
