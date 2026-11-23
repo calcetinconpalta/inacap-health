@@ -92,6 +92,13 @@ object Anonimizacion {
         .put("requiere_derivacion", r.requiereDerivacion)
         .put("fecha", fechaIso(r.createdAt))
 
+    /** Tarea 18f: solo el tipo, el puntaje y si hay alerta (nunca las respuestas). */
+    fun cuestionario(r: com.inacap.health.data.ResultadoCuestionario): JSONObject = JSONObject()
+        .put("tipo", r.tipo)
+        .put("puntaje", r.puntaje)
+        .put("alerta", r.alerta)
+        .put("fecha", fechaIso(r.createdAt))
+
     fun consentimiento(c: Consentimiento): JSONObject = JSONObject()
         .put("tipo", c.tipo)
         .put("version", c.version)

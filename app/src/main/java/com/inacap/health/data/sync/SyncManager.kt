@@ -110,6 +110,9 @@ class SyncManager(
     suspend fun encolarScoff(r: ResultadoScoff) =
         encolarSql(TABLA_SCOFF, r.uuid, Anonimizacion.resultadoScoff(r))
 
+    suspend fun encolarCuestionario(r: com.inacap.health.data.ResultadoCuestionario) =
+        encolarSql(TABLA_CUESTIONARIOS, r.uuid, Anonimizacion.cuestionario(r))
+
     suspend fun encolarConsentimiento(c: Consentimiento) =
         encolarSql(TABLA_CONSENTIMIENTOS, c.uuid, Anonimizacion.consentimiento(c))
 
@@ -385,6 +388,7 @@ class SyncManager(
         when (tabla) {
             TABLA_REGISTROS -> if (db.registroBiometricoDao().cambiarUuid(viejo, nuevo) == 0) db.pasosDiaDao().cambiarUuid(viejo, nuevo)
             TABLA_SCOFF -> db.resultadoScoffDao().cambiarUuid(viejo, nuevo)
+            TABLA_CUESTIONARIOS -> db.resultadoCuestionarioDao().cambiarUuid(viejo, nuevo)
             TABLA_CONSENTIMIENTOS -> db.consentimientoDao().cambiarUuid(viejo, nuevo)
         }
         outbox.cambiarRegistroId(tabla, viejo, nuevo)
@@ -422,6 +426,7 @@ class SyncManager(
         const val TABLA_CONSENTIMIENTOS = "consentimientos"
         const val TABLA_DERIVACIONES = "derivaciones"
         const val TABLA_ANTECEDENTES = "antecedentes_cifrados"
+        const val TABLA_CUESTIONARIOS = "resultados_cuestionario"
         const val COLECCION_EVENTOS = "eventos"
         const val MOTIVO_REVOCACION = "revocacion"
         const val MOTIVO_ELIMINACION = "eliminacion"

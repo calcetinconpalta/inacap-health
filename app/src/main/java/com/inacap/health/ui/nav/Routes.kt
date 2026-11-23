@@ -20,6 +20,7 @@ object Routes {
 
     // Subrutas Bienestar
     const val SCOFF = "scoff"
+    const val CUESTIONARIOS = "cuestionarios"
     const val DERIVACION = "derivacion"
     const val EDUCATIVO = "educativo"
     const val ORIENTACION = "orientacion"

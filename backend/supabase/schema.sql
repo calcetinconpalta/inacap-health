@@ -1440,3 +1440,37 @@ $$;
 
 revoke all on function public.guardar_antecedentes(jsonb), public.borrar_antecedentes() from public, anon;
 grant execute on function public.guardar_antecedentes(jsonb), public.borrar_antecedentes() to authenticated;
+
+-- =====================================================================
+-- v4 (1.3.3) · Cuestionarios de Bienestar (tarea 18f). Solo el PUNTAJE, nunca las respuestas,
+--   y solo si la persona comparte datos anonimizados. Mismas reglas que resultados_scoff.
+-- =====================================================================
+
+create table if not exists public.resultados_cuestionario (
+    id          uuid primary key,
+    usuario_id  uuid not null default auth.uid() references public.usuarios (id) on delete cascade,
+    tipo        text not null check (tipo in ('who5', 'phq2', 'phq9', 'gad2', 'gad7', 'pss10', 'auditc', 'ipaq')),
+    puntaje     int  not null check (puntaje between 0 and 100),
+    alerta      boolean not null,
+    fecha       timestamptz not null check (fecha > '2024-01-01' and fecha < now() + interval '1 day'),
+    recibido_en timestamptz not null default now()
+);
+create index if not exists idx_cuestionario_usuario on public.resultados_cuestionario (usuario_id);
+alter table public.resultados_cuestionario enable row level security;
+revoke all on public.resultados_cuestionario from anon, authenticated;
+grant select, insert, update, delete on public.resultados_cuestionario to authenticated;
+drop policy if exists resultados_cuestionario_select on public.resultados_cuestionario;
+drop policy if exists resultados_cuestionario_insert on public.resultados_cuestionario;
+drop policy if exists resultados_cuestionario_update on public.resultados_cuestionario;
+drop policy if exists resultados_cuestionario_delete on public.resultados_cuestionario;
+create policy resultados_cuestionario_select on public.resultados_cuestionario for select to authenticated
+    using (usuario_id = auth.uid() or public.es_admin());
+create policy resultados_cuestionario_insert on public.resultados_cuestionario for insert to authenticated
+    with check (usuario_id = auth.uid());
+create policy resultados_cuestionario_update on public.resultados_cuestionario for update to authenticated
+    using (usuario_id = auth.uid()) with check (usuario_id = auth.uid());
+create policy resultados_cuestionario_delete on public.resultados_cuestionario for delete to authenticated
+    using (usuario_id = auth.uid());
+drop trigger if exists resultados_cuestionario_limite on public.resultados_cuestionario;
+create trigger resultados_cuestionario_limite before insert on public.resultados_cuestionario
+    for each row execute function public.limitar_por_usuario();   -- 1000 por hora (rama por defecto)

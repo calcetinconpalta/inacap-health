@@ -142,6 +142,7 @@ private fun AppNavContent(
 
     val bienestarItems = listOf(
         HubItem("Test SCOFF", "Cuestionario breve de autocuidado", Routes.SCOFF, true, Icons.Default.CheckCircle),
+        HubItem("Cuestionarios", "Bienestar, ánimo y más (no es un diagnóstico)", Routes.CUESTIONARIOS, true, Icons.Default.CheckCircle),
         HubItem("Apoyo de Bienestar", "Pide atención confidencial", Routes.DERIVACION, true, Icons.Default.Call),
         HubItem("Aprende", "Nutrición y hábitos saludables", Routes.EDUCATIVO, true, Icons.Default.Info),
         HubItem("Orientación entre pares", "Conversa con un tutor par supervisado", Routes.ORIENTACION, true, Icons.Default.Email)
@@ -327,6 +328,12 @@ private fun AppNavContent(
                 )
               }
             }
+            composable(Routes.CUESTIONARIOS) {
+                com.inacap.health.ui.screens.bienestar.CuestionariosScreen(
+                    onBack = { navController.volver() },
+                    onPedirAtencion = { navController.navigate(Routes.DERIVACION) }
+                )
+            }
             composable(Routes.ATENCION) {
                 OrientacionScreen(
                     onNavigateToDerivacion = { navController.volver() },
@@ -443,7 +450,7 @@ internal fun NavHostController.volver() {
 /** A qué pestaña pertenece cada pantalla (para resaltarla en la barra inferior). */
 private fun pestanaDe(ruta: String?): String = when (ruta) {
     Routes.SALUD, Routes.IMC_AGUA, Routes.HISTORIAL, Routes.PULSO, Routes.HEALTH_CONNECT, Routes.RESUMEN_PDF -> Routes.SALUD
-    Routes.BIENESTAR, Routes.SCOFF, Routes.DERIVACION, Routes.EDUCATIVO, Routes.ORIENTACION, Routes.ATENCION, Routes.PH_VIDEOLAMADA -> Routes.BIENESTAR
+    Routes.BIENESTAR, Routes.SCOFF, Routes.CUESTIONARIOS, Routes.DERIVACION, Routes.EDUCATIVO, Routes.ORIENTACION, Routes.ATENCION, Routes.PH_VIDEOLAMADA -> Routes.BIENESTAR
     Routes.PERFIL, Routes.PERFIL_DATOS, Routes.RECORDATORIOS, Routes.BLOQUEO, Routes.SEGURIDAD,
     Routes.PRIVACIDAD, Routes.CUENTA, Routes.TERMINOS, Routes.ACCESO, Routes.ACCESO_SESION, Routes.APARIENCIA -> Routes.PERFIL
     else -> Routes.INICIO
