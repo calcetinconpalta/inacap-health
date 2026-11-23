@@ -385,7 +385,7 @@ private fun TabAguaContent(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Promedio de los últimos 7 días: $promedioMl ml",
+                    text = "Promedio de los últimos 7 días: ${com.inacap.health.ui.screens.salud.SaludLogic.litrosYVasos(promedioMl)}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextPrimary
                 )

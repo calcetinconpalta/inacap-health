@@ -251,7 +251,7 @@ fun CalculadorasScreen(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Meta de agua sugerida: $metaAgua ml al día",
+                                text = SaludLogic.recomendacionAgua(metaAgua),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface

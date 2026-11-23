@@ -156,13 +156,13 @@ fun InicioScreen(
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "$aguaHoyMl / $metaAguaMl ml",
+                            text = "${com.inacap.health.ui.screens.salud.SaludLogic.vasos(aguaHoyMl)} de ${com.inacap.health.ui.screens.salud.SaludLogic.metaVasos(metaAguaMl)}",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Agua registrada",
+                            text = "vasos",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -177,14 +177,26 @@ fun InicioScreen(
                         onClick = { saludViewModel.agregarAgua() },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("+ 250 ml")
+                        Text("+ 1 vaso")
                     }
                     OutlinedButton(
                         onClick = { saludViewModel.quitarAgua() },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Quitar 250 ml")
+                        Text("Quitar 1 vaso")
                     }
+                }
+                Text(
+                    com.inacap.health.ui.screens.salud.SaludLogic.textoProgresoAgua(aguaHoyMl, metaAguaMl),
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface
+                )
+                if (ultimoRegistro == null) {
+                    // Sin peso registrado: meta general y sugerencia de completar los datos.
+                    Text(
+                        "Meta general de 2 L. Calcula tu IMC y te recomendamos una meta según tu peso.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    androidx.compose.material3.TextButton(onClick = { onNavigate(Routes.IMC_AGUA) }) { Text("Calcular IMC") }
                 }
             }
         }

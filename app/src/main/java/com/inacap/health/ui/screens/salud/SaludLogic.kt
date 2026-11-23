@@ -1,8 +1,42 @@
 package com.inacap.health.ui.screens.salud
 
 import kotlin.math.round
+import kotlin.math.roundToInt
 
 object SaludLogic {
+    // ---------- Agua en vasos y litros (tarea 15): nada de "ml" en pantalla ----------
+    const val VASO_ML = 250
+    /** Meta general cuando aún no hay peso registrado. */
+    const val META_GENERAL_ML = 2000
+
+    /** Vasos completos tomados (cada registro es un vaso). */
+    fun vasos(ml: Int): Int = (ml.coerceAtLeast(0)) / VASO_ML
+
+    /** Meta en vasos, redondeada (mínimo 1). 2000 ml → 8; 2300 ml → 9. */
+    fun metaVasos(metaMl: Int): Int = (metaMl.toDouble() / VASO_ML).roundToInt().coerceAtLeast(1)
+
+    /** Litros con coma y sin ceros de sobra: 750 → "0,75"; 2000 → "2"; 2300 → "2,3". */
+    fun litros(ml: Int, decimales: Int = 2): String {
+        val factor = if (decimales <= 1) 10.0 else 100.0
+        val l = round(ml / 1000.0 * factor) / factor
+        val txt = if (l == l.toLong().toDouble()) l.toLong().toString() else l.toString()
+        return txt.replace('.', ',')
+    }
+
+    /** "Llevas 3 de 8 vasos (0,75 de 2 L)". */
+    fun textoProgresoAgua(aguaMl: Int, metaMl: Int): String {
+        val n = vasos(aguaMl)
+        val meta = metaVasos(metaMl)
+        return "Llevas $n de $meta ${if (meta == 1) "vaso" else "vasos"} (${litros(aguaMl)} de ${litros(metaMl, 1)} L)"
+    }
+
+    /** "Con tu peso te recomendamos unos 2,3 L al día (9 vasos)". */
+    fun recomendacionAgua(metaMl: Int): String =
+        "Con tu peso te recomendamos unos ${litros(metaMl, 1)} L al día (${metaVasos(metaMl)} vasos)"
+
+    /** "1,8 L al día (7 vasos)", para promedios del historial. */
+    fun litrosYVasos(ml: Int): String = "${litros(ml, 1)} L (${(ml.toDouble() / VASO_ML).roundToInt()} vasos)"
+
     fun calcularImc(pesoKg: Double, estaturaCm: Double): Double {
         if (estaturaCm <= 0.0) return 0.0
         val estaturaM = estaturaCm / 100.0
