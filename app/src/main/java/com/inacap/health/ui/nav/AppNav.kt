@@ -1,6 +1,11 @@
 package com.inacap.health.ui.nav
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -177,23 +182,33 @@ private fun AppNavContent(
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface
+                // Tarea 18e: barra flotante blanca; la pestaña activa con fondo rojo y texto blanco.
+                androidx.compose.material3.Surface(
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 8.dp,
+                    modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)
                 ) {
-                    items.forEach { item ->
-                        NavigationBarItem(
-                            icon = { Icon(item.icon, contentDescription = item.title) },
-                            label = { Text(item.title) },
-                            selected = pestanaActual == item.route,
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.primary,
-                                selectedTextColor = MaterialTheme.colorScheme.primary,
-                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                indicatorColor = MaterialTheme.colorScheme.primaryContainer
-                            ),
-                            onClick = { irAPestana(navController, item.route) }
-                        )
+                    androidx.compose.foundation.layout.Row(
+                        Modifier.fillMaxWidth().padding(6.dp),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp)
+                    ) {
+                        items.forEach { item ->
+                            val activa = pestanaActual == item.route
+                            val fondo = if (activa) com.inacap.health.ui.theme.Diseno.BandaRoja else androidx.compose.ui.graphics.Color.Transparent
+                            val tinta = if (activa) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                            androidx.compose.foundation.layout.Column(
+                                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                                modifier = Modifier.weight(1f)
+                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
+                                    .background(fondo)
+                                    .selectable(selected = activa, role = androidx.compose.ui.semantics.Role.Tab) { irAPestana(navController, item.route) }
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                Icon(item.icon, contentDescription = item.title, tint = tinta)
+                                Text(item.title, color = tinta, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                            }
+                        }
                     }
                 }
             }

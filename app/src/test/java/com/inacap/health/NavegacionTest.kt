@@ -103,6 +103,21 @@ class NavegacionTest {
         compose.onNodeWithText("Completa tus datos para recomendaciones personalizadas").assertIsDisplayed()
     }
 
+    /** Captura de Inicio (rediseño 18e) para revisar sin teléfono: app/build/capturas/inicio.png */
+    @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    fun capturaDeInicio() {
+        conPerfil(); abrir()
+        Thread.sleep(300); compose.waitForIdle()
+        var img: android.graphics.Bitmap? = null
+        compose.runOnUiThread {
+            val v = compose.activity.window.decorView
+            img = android.graphics.Bitmap.createBitmap(v.width, v.height, android.graphics.Bitmap.Config.ARGB_8888).also { v.draw(android.graphics.Canvas(it)) }
+        }
+        val bitmap = img!!
+        val dir = java.io.File("build/capturas").apply { mkdirs() }
+        java.io.FileOutputStream(java.io.File(dir, "inicio.png")).use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+    }
+
     @Test fun inicioVuelveDesdeOtraPestana() {
         conPerfil(); abrir()
         tab("Salud"); compose.onNodeWithText("Calculadoras IMC e hidratación").assertIsDisplayed()

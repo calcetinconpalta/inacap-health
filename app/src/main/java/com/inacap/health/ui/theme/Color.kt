@@ -14,7 +14,7 @@ internal object Paleta {
     val RojoNoche = Color(0xFFFF8A93)
 
     // Claro
-    val Fondo = Color(0xFFF5F7F8)
+    val Fondo = Color(0xFFF7F7F8)            // 1.3.3: blanco/gris muy claro (rediseño rojo y blanco)
     val Superficie = Color(0xFFFFFFFF)
     val SuperficieVariante = Color(0xFFEDF1F3)
     val Texto = Color(0xFF1A1D20)
@@ -26,7 +26,7 @@ internal object Paleta {
     val CalmaTexto = Color(0xFF0E3A3E)
 
     // Noche
-    val FondoNoche = Color(0xFF101315)
+    val FondoNoche = Color(0xFF0C0C0E)       // 1.3.3: casi negro
     val SuperficieNoche = Color(0xFF181C1F)
     val SuperficieVarianteNoche = Color(0xFF22272B)
     val TextoNoche = Color(0xFFE2E6E9)

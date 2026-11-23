@@ -81,6 +81,10 @@ class SaludViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** Última medición de pulso guardada (cámara, reloj o Health Connect), para el hero de Inicio. */
+    val ultimoPulso: StateFlow<RegistroBiometrico?> = dao.getPulsosDesc().map { it.firstOrNull() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     // ---------- Tarea 18g: ánimo del día (solo en el teléfono) ----------
     private val animoDao = app.database.estadoAnimoDao()
 

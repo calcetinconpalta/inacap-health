@@ -1,5 +1,9 @@
 package com.inacap.health.ui.screens.inicio
 
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material.icons.filled.Person
+import kotlinx.coroutines.launch
 import com.inacap.health.data.datosCompletos
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.foundation.clickable
@@ -63,278 +67,121 @@ fun InicioScreen(
     val nombre = perfilState?.nombre?.trim()
     val saludo = if (!nombre.isNullOrBlank()) "Hola, $nombre" else "Hola"
 
+    val pasosHoy by saludViewModel.pasosHoy.collectAsState()
+    val metaPasos by saludViewModel.metaPasos.collectAsState()
+    val ultimoPulso by saludViewModel.ultimoPulso.collectAsState()
+    val reloj by saludViewModel.reloj.collectAsState()
+    val animoHoy by saludViewModel.animoHoy.collectAsState()
+    val sugerirApoyo by saludViewModel.sugerirApoyoAnimo.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val oscuro = com.inacap.health.ui.theme.temaOscuroActivo()
+    val cl = Locale.forLanguageTag("es-CL")
+    val hoy = remember {
+        java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", cl))
+            .replaceFirstChar { it.titlecase(cl) }
+    }
+    val banda = if (oscuro) com.inacap.health.ui.theme.Diseno.BandaRojaNoche else com.inacap.health.ui.theme.Diseno.BandaRoja
+    val pager = androidx.compose.foundation.pager.rememberPagerState(pageCount = { DatoHero.entries.size })
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val quieto = sinAnimaciones()
+    val pagina = pager.paginaVisible()
+    val logica = com.inacap.health.ui.screens.salud.SaludLogic
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Encabezado: fecha, saludo y modo noche
-        val context = androidx.compose.ui.platform.LocalContext.current
-        val oscuro = com.inacap.health.ui.theme.temaOscuroActivo()
-        val hoy = remember {
-            java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", Locale.forLanguageTag("es-CL")))
-                .replaceFirstChar { it.titlecase(Locale.forLanguageTag("es-CL")) }
-        }
-        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(hoy, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.secondary)
-                Text(saludo, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
-                Text("Un paso a la vez. Así va tu día.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            androidx.compose.material3.FilledTonalIconButton(
-                onClick = { com.inacap.health.ui.theme.Apariencia.alternar(context, oscuro) },
-                colors = androidx.compose.material3.IconButtonDefaults.filledTonalIconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Icon(
-                    if (oscuro) com.inacap.health.ui.components.Iconos.Sol else com.inacap.health.ui.components.Iconos.Luna,
-                    contentDescription = if (oscuro) "Activar modo claro" else "Activar modo noche",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        // Tarea 14: si faltan datos (o se omitieron al crear la cuenta), se invita a completarlos.
-        if (perfilState != null && !perfilState.datosCompletos()) {
-            AvisoCompletarDatos(onCompletar = { onNavigate(Routes.PERFIL_DATOS) })
-        }
-
-        // Tarea 18g: check-in diario de ánimo (reemplaza al SCOFF en Inicio).
-        val animoHoy by saludViewModel.animoHoy.collectAsState()
-        val sugerirApoyo by saludViewModel.sugerirApoyoAnimo.collectAsState()
-        CheckInAnimo(
-            nivelHoy = animoHoy, sugerirApoyo = sugerirApoyo,
-            onElegir = { saludViewModel.guardarAnimo(it) },
-            onCuestionarios = { onNavigate(Routes.CUESTIONARIOS) },
-            onBienestar = { onNavigate(Routes.DERIVACION) }
-        )
-
-        // Tarjeta Agua
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        // Banda roja INACAP: marca, fecha, saludo y el hero (tarea 18e).
+        Column(
+            Modifier.fillMaxWidth().background(banda, androidx.compose.foundation.shape.RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
+                .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Row(Modifier.align(Alignment.Start), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(com.inacap.health.ui.components.Iconos.Gota, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp))
-                    Text(
-                        text = "Hidratación diaria",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("INACAP Health", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                androidx.compose.material3.IconButton(onClick = { com.inacap.health.ui.theme.Apariencia.alternar(context, oscuro) }) {
+                    Icon(
+                        if (oscuro) com.inacap.health.ui.components.Iconos.Sol else com.inacap.health.ui.components.Iconos.Luna,
+                        contentDescription = if (oscuro) "Activar modo claro" else "Activar modo noche", tint = Color.White
                     )
-                }
-
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.size(160.dp)
-                ) {
-                    val progress = if (metaAguaMl > 0) (aguaHoyMl.toFloat() / metaAguaMl.toFloat()).coerceIn(0f, 1f) else 0f
-                    val strokeWidth = with(LocalDensity.current) { 14.dp.toPx() }
-                    val pista = BorderGray
-                    val relleno = MaterialTheme.colorScheme.secondary
-
-                    Canvas(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(10.dp)
-                    ) {
-                        drawArc(
-                            color = pista,
-                            startAngle = -90f,
-                            sweepAngle = 360f,
-                            useCenter = false,
-                            style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                        )
-                        if (progress > 0f) {
-                            drawArc(
-                                color = relleno,
-                                startAngle = -90f,
-                                sweepAngle = progress * 360f,
-                                useCenter = false,
-                                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                            )
-                        }
-                    }
-
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "${com.inacap.health.ui.screens.salud.SaludLogic.vasos(aguaHoyMl)} de ${com.inacap.health.ui.screens.salud.SaludLogic.metaVasos(metaAguaMl)}",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "vasos",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = { saludViewModel.agregarAgua() },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("+ 1 vaso")
-                    }
-                    OutlinedButton(
-                        onClick = { saludViewModel.quitarAgua() },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Quitar 1 vaso")
-                    }
-                }
-                Text(
-                    com.inacap.health.ui.screens.salud.SaludLogic.textoProgresoAgua(aguaHoyMl, metaAguaMl),
-                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface
-                )
-                if (ultimoRegistro == null) {
-                    // Sin peso registrado: meta general y sugerencia de completar los datos.
-                    Text(
-                        "Meta general de 2 L. Calcula tu IMC y te recomendamos una meta según tu peso.",
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    androidx.compose.material3.TextButton(onClick = { onNavigate(Routes.IMC_AGUA) }) { Text("Calcular IMC") }
                 }
             }
-        }
-
-        // Tarjeta Pasos (HU-10: metas de movimiento, sin calorías)
-        TarjetaPasos(saludViewModel = saludViewModel, onNavigate = onNavigate)
-
-        // Reloj: se trae solo al abrir y cada 5 min mientras Inicio está abierto.
-        TarjetaReloj(saludViewModel = saludViewModel, onNavigate = onNavigate)
-
-        // Tarjeta IMC
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "Índice de Masa Corporal (IMC)",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                if (ultimoRegistro != null && ultimoRegistro?.imc != null) {
-                    val imcVal = ultimoRegistro!!.imc!!
-                    val categoria = SaludLogic.categoriaImc(imcVal)
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "IMC: ${String.format(Locale.US, "%.1f", imcVal)}",
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = categoria,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Button(onClick = { onNavigate(Routes.IMC_AGUA) }) {
-                            Text("Calcular")
-                        }
-                    }
-                } else {
-                    Text(
-                        text = "Aún no hay datos",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+            Text(hoy, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.labelLarge)
+            Text(saludo, color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(12.dp))
+            HeroInicio(pager, banda) { dato ->
+                when (dato) {
+                    DatoHero.AGUA -> ContenidoHero(
+                        "${logica.vasos(aguaHoyMl)} de ${logica.metaVasos(metaAguaMl)} vasos",
+                        "${logica.litros(aguaHoyMl)} de ${logica.litros(metaAguaMl, 1)} L hoy"
                     )
-                    Button(
-                        onClick = { onNavigate(Routes.IMC_AGUA) },
-                        modifier = Modifier.align(Alignment.Start)
-                    ) {
-                        Text("Calcular")
+                    DatoHero.PASOS -> ContenidoHero(String.format(cl, "%,d", pasosHoy), "pasos hoy · meta ${String.format(cl, "%,d", metaPasos)}")
+                    DatoHero.PULSO -> {
+                        val bpm = reloj?.bpm ?: ultimoPulso?.frecuenciaCardiaca
+                        ContenidoHero(bpm?.let { "$it lpm" } ?: "—", if (bpm == null) "Mide tu pulso con la cámara" else "Última medición")
                     }
-                }
-            }
-        }
-
-        // Dos accesos rápidos
-        Text(
-            text = "Accesos rápidos",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // El test SCOFF ya no va en Inicio (tarea 18e/18g): está en Bienestar.
-            // Acceso Medir pulso (HU-05)
-            Card(
-                onClick = { onNavigate(Routes.PULSO) },
-                modifier = Modifier.weight(1f),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Favorite,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    Text(
-                        text = "Medir pulso",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Con la cámara · estimación",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    DatoHero.IMC -> ContenidoHero(
+                        ultimoRegistro?.imc?.let { String.format(cl, "%.1f", it) } ?: "—",
+                        ultimoRegistro?.imc?.let { logica.categoriaImc(it) } ?: "Calcula tu IMC"
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            IconosHero(
+                seleccionado = pagina,
+                iconos = listOf(com.inacap.health.ui.components.Iconos.Gota, com.inacap.health.ui.components.Iconos.Pasos,
+                    androidx.compose.material.icons.Icons.Default.Favorite, androidx.compose.material.icons.Icons.Default.Person),
+                onElegir = { i -> scope.launch { if (quieto) pager.scrollToPage(i) else pager.animateScrollToPage(i) } }
+            )
+            // El botón cambia según el dato.
+            when (DatoHero.entries[pagina]) {
+                DatoHero.AGUA -> {
+                    BotonPrincipal("+ 1 vaso") { saludViewModel.agregarAgua() }
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(logica.textoProgresoAgua(aguaHoyMl, metaAguaMl), style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                        androidx.compose.material3.TextButton(onClick = { saludViewModel.quitarAgua() }) { Text("Quitar 1 vaso") }
+                    }
+                    if (ultimoRegistro == null) {
+                        Text("Meta general de 2 L. Calcula tu IMC y te recomendamos una meta según tu peso.",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                DatoHero.PASOS -> BotonPrincipal("Ver mis pasos") { onNavigate(Routes.HISTORIAL) }
+                DatoHero.PULSO -> BotonPrincipal("Medir pulso") { onNavigate(Routes.PULSO) }
+                DatoHero.IMC -> BotonPrincipal("Calcular IMC") { onNavigate(Routes.IMC_AGUA) }
+            }
 
-        // Texto pequeño gris al final
-        Text(
-            text = "INACAP Health es un primer filtro de autocuidado. No entrega diagnósticos.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+            // Tarea 14: si faltan datos (o se omitieron al crear la cuenta), se invita a completarlos.
+            if (perfilState != null && !perfilState.datosCompletos()) {
+                AvisoCompletarDatos(onCompletar = { onNavigate(Routes.PERFIL_DATOS) })
+            }
+
+            // Tarea 18g: check-in diario de ánimo (el SCOFF va en Bienestar, no en Inicio).
+            CheckInAnimo(
+                nivelHoy = animoHoy, sugerirApoyo = sugerirApoyo,
+                onElegir = { saludViewModel.guardarAnimo(it) },
+                onCuestionarios = { onNavigate(Routes.CUESTIONARIOS) },
+                onBienestar = { onNavigate(Routes.DERIVACION) }
+            )
+
+            // Pasos en vivo (sensor) y meta.
+            TarjetaPasos(saludViewModel = saludViewModel, onNavigate = onNavigate)
+
+            // Reloj: se trae solo al abrir y cada 5 min mientras Inicio está abierto.
+            TarjetaReloj(saludViewModel = saludViewModel, onNavigate = onNavigate)
+
+            Text(
+                text = "INACAP Health es un primer filtro de autocuidado. No entrega diagnósticos.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(8.dp))
+        }
     }
 }
 
