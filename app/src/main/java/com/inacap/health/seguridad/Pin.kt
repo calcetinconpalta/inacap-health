@@ -42,6 +42,22 @@ object Pin {
         return (30_000L shl exp).coerceAtMost(15 * 60_000L)
     }
 
+    /**
+     * Cuánto falta de la espera, medida con el reloj monótono (tiempo desde que se encendió el
+     * teléfono), que no cambia al ajustar la hora. [pendienteMs] es la espera que quedaba en el
+     * momento [refMs] del arranque [refArranque].
+     *
+     * Si el teléfono se reinició (otro número de arranque, o el reloj monótono "retrocedió"),
+     * no se sabe cuánto pasó antes de apagarlo: se cuenta solo el tiempo desde el encendido,
+     * así reiniciar nunca acorta la espera.
+     */
+    fun esperaRestante(pendienteMs: Long, refMs: Long, refArranque: Int, ahoraMs: Long, arranqueActual: Int): Long {
+        if (pendienteMs <= 0) return 0
+        val mismoArranque = arranqueActual == refArranque && ahoraMs >= refMs
+        val transcurrido = if (mismoArranque) ahoraMs - refMs else ahoraMs
+        return (pendienteMs - transcurrido).coerceIn(0, pendienteMs)
+    }
+
     /** ¿Hay que bloquear al volver a la app? */
     fun debeBloquear(tieneBloqueo: Boolean, enSegundoPlanoDesde: Long, ahora: Long, minutos: Int): Boolean =
         tieneBloqueo && enSegundoPlanoDesde > 0 && ahora - enSegundoPlanoDesde >= minutos * 60_000L
