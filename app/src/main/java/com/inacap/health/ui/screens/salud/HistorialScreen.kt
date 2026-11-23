@@ -151,10 +151,11 @@ fun HistorialScreen(
 private fun TabPorMesContent(viewModel: HistorialViewModel) {
     val registros by viewModel.todosRegistros.collectAsState()
     val pasos by viewModel.todosPasos.collectAsState()
+    val animo by viewModel.todoAnimo.collectAsState()
     val hoy = remember { java.time.LocalDate.now() }
     var mesTexto by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(java.time.YearMonth.from(hoy).toString()) }
     val mes = java.time.YearMonth.parse(mesTexto)
-    val semanas = remember(registros, pasos, mesTexto) { HistorialMensual.resumir(mes, hoy, registros, pasos) }
+    val semanas = remember(registros, pasos, animo, mesTexto) { HistorialMensual.resumir(mes, hoy, registros, pasos, animo = animo) }
     val cl = java.util.Locale.forLanguageTag("es-CL")
     val corto = java.time.format.DateTimeFormatter.ofPattern("d MMM", cl)
 
@@ -186,6 +187,7 @@ private fun TabPorMesContent(viewModel: HistorialViewModel) {
                 com.inacap.health.ui.components.FilaValor("Pasos por día", s.pasosPorDia?.let { String.format(cl, "%,d", it) } ?: "—")
                 com.inacap.health.ui.components.FilaValor("Pulso promedio", s.pulsoPromedio?.let { "$it lpm" } ?: "—")
                 com.inacap.health.ui.components.FilaValor("IMC", s.imc?.let { String.format(cl, "%.1f", it) } ?: "—")
+                com.inacap.health.ui.components.FilaValor("Ánimo", s.animoPromedio?.let { p -> com.inacap.health.salud.Animo.nivel(kotlin.math.round(p).toInt())?.let { "${it.emoji} ${it.nombre}" } } ?: "—")
             }
         }
     }

@@ -20,9 +20,11 @@ data class SemanaResumen(
     val pasosPorDia: Int?,
     val pulsoPromedio: Int?,
     /** Último IMC calculado en esa semana. */
-    val imc: Double?
+    val imc: Double?,
+    /** Tarea 18g: promedio del ánimo diario (1 = muy mal … 5 = muy bien). */
+    val animoPromedio: Double? = null
 ) {
-    val vacia get() = aguaMlPorDia == null && pasosPorDia == null && pulsoPromedio == null && imc == null
+    val vacia get() = aguaMlPorDia == null && pasosPorDia == null && pulsoPromedio == null && imc == null && animoPromedio == null
 }
 
 /**
@@ -52,7 +54,8 @@ object HistorialMensual {
         hoy: LocalDate,
         registros: List<RegistroBiometrico>,
         pasos: List<PasosDia>,
-        zona: ZoneId = ZoneId.systemDefault()
+        zona: ZoneId = ZoneId.systemDefault(),
+        animo: List<com.inacap.health.data.EstadoAnimo> = emptyList()
     ): List<SemanaResumen> {
         fun dia(ms: Long) = Instant.ofEpochMilli(ms).atZone(zona).toLocalDate()
         return semanas(mes, hoy).map { (n, rango) ->
@@ -66,7 +69,9 @@ object HistorialMensual {
                 aguaMlPorDia = aguaPorDia.values.takeIf { it.isNotEmpty() }?.average()?.roundToInt(),
                 pasosPorDia = pasosSemana.takeIf { it.isNotEmpty() }?.average()?.roundToInt(),
                 pulsoPromedio = pulsos.takeIf { it.isNotEmpty() }?.average()?.roundToInt(),
-                imc = delaSemana.filter { it.imc != null }.maxByOrNull { it.createdAt }?.imc
+                imc = delaSemana.filter { it.imc != null }.maxByOrNull { it.createdAt }?.imc,
+                animoPromedio = animo.mapNotNull { a -> runCatching { LocalDate.parse(a.fecha) }.getOrNull()?.takeIf { it in rango }?.let { a.nivel } }
+                    .takeIf { it.isNotEmpty() }?.average()
             )
         }
     }

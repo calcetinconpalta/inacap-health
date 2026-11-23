@@ -100,6 +100,16 @@ fun InicioScreen(
             AvisoCompletarDatos(onCompletar = { onNavigate(Routes.PERFIL_DATOS) })
         }
 
+        // Tarea 18g: check-in diario de ánimo (reemplaza al SCOFF en Inicio).
+        val animoHoy by saludViewModel.animoHoy.collectAsState()
+        val sugerirApoyo by saludViewModel.sugerirApoyoAnimo.collectAsState()
+        CheckInAnimo(
+            nivelHoy = animoHoy, sugerirApoyo = sugerirApoyo,
+            onElegir = { saludViewModel.guardarAnimo(it) },
+            onCuestionarios = { onNavigate(Routes.CUESTIONARIOS) },
+            onBienestar = { onNavigate(Routes.DERIVACION) }
+        )
+
         // Tarjeta Agua
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -279,36 +289,7 @@ fun InicioScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Acceso Test SCOFF
-            Card(
-                onClick = { onNavigate(Routes.SCOFF) },
-                modifier = Modifier.weight(1f),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Face,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "Test SCOFF",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Autocuidado alimentario",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
+            // El test SCOFF ya no va en Inicio (tarea 18e/18g): está en Bienestar.
             // Acceso Medir pulso (HU-05)
             Card(
                 onClick = { onNavigate(Routes.PULSO) },

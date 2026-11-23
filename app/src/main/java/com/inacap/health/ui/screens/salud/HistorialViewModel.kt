@@ -58,6 +58,9 @@ class HistorialViewModel(application: Application) : AndroidViewModel(applicatio
     val todosPasos: StateFlow<List<PasosDia>> = app.database.pasosDiaDao().observarTodos()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val todoAnimo: StateFlow<List<com.inacap.health.data.EstadoAnimo>> = app.database.estadoAnimoDao().observarTodos()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val resultadosScoffDesc: StateFlow<List<ResultadoScoff>> = scoffDao.getAll()
         .stateIn(
             scope = viewModelScope,

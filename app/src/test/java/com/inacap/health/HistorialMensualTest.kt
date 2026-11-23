@@ -49,4 +49,17 @@ class HistorialMensualTest {
         assertEquals(22.5, r[1].imc!!, 0.0)            // el último de la semana
         assertTrue(r[2].vacia)
     }
+
+    @Test fun animoEnElHistorialYSugerenciaTrasTresDiasMalos() {
+        val hoy = LocalDate.of(2026, 11, 23)
+        fun a(d: Int, n: Int) = com.inacap.health.data.EstadoAnimo(fecha = LocalDate.of(2026, 11, d).toString(), nivel = n)
+        val r = HistorialMensual.resumir(YearMonth.of(2026, 11), hoy, emptyList(), emptyList(), zona, animo = listOf(a(22, 4), a(23, 2)))
+        assertEquals(3.0, r[3].animoPromedio!!, 0.0)
+        val animo = com.inacap.health.salud.Animo
+        assertTrue(animo.sugerirApoyo(listOf(a(21, 2), a(22, 1), a(23, 2)), hoy))
+        assertFalse("Un día normal corta la racha", animo.sugerirApoyo(listOf(a(21, 2), a(22, 3), a(23, 1)), hoy))
+        assertFalse("Falta un día", animo.sugerirApoyo(listOf(a(21, 2), a(23, 1)), hoy))
+        assertFalse("La racha debe llegar a hoy", animo.sugerirApoyo(listOf(a(20, 1), a(21, 1), a(22, 1)), hoy))
+        assertEquals(5, animo.NIVELES.size)
+    }
 }

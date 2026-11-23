@@ -81,6 +81,25 @@ class SaludViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // ---------- Tarea 18g: ánimo del día (solo en el teléfono) ----------
+    private val animoDao = app.database.estadoAnimoDao()
+
+    val animoHoy: StateFlow<Int?> = flujoInicioDelDia()
+        .flatMapLatest { inicio -> animoDao.observar(CalculoPasos.fecha(inicio)) }
+        .map { it?.nivel }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** «Mal» o «Muy mal» 3 días seguidos (hasta hoy) → sugerir apoyo con suavidad. */
+    val sugerirApoyoAnimo: StateFlow<Boolean> = animoDao.observarTodos()
+        .map { com.inacap.health.salud.Animo.sugerirApoyo(it, java.time.LocalDate.now()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun guardarAnimo(nivel: Int) {
+        viewModelScope.launch {
+            animoDao.guardar(com.inacap.health.data.EstadoAnimo(fecha = CalculoPasos.fecha(), nivel = nivel.coerceIn(1, 5)))
+        }
+    }
+
     /** Escucha el sensor mientras quien llama siga activo (Inicio a la vista). */
     suspend fun pasosEnVivo() = app.pasos.escucharEnVivo()
 
