@@ -43,7 +43,10 @@ npx wrangler pages deploy dashboard --project-name inacap-health
 (No hay `wrangler.toml` a propósito: si existe, Cloudflare Pages ignora las variables cargadas en su panel y el panel quedaría en modo demostración.)
 
 ### Después de publicar
-- **Supabase → Authentication → URL Configuration:** *Site URL* = la dirección del panel; *Redirect URLs* = `https://TU-PANEL.pages.dev/restablecer.html`.
+- **Supabase → Authentication → URL Configuration:** *Site URL* = la dirección del panel; *Redirect URLs* = `https://TU-PANEL.pages.dev/restablecer.html` **y** `https://TU-PANEL.pages.dev/confirmado.html`.
+  - `confirmado.html` es la página "✓ Correo confirmado · Vuelve a la app" a la que lleva el enlace de confirmación cuando un estudiante crea su cuenta desde la app (la app la manda como `redirect_to`). **Si no está en Redirect URLs, Supabase la ignora y el enlace vuelve a abrir el panel.**
+  - Si cambias la dirección del panel, actualiza también `url_restablecer` y `url_confirmado` en `app/src/main/res/values/strings.xml`.
+  - Revisa que **Authentication → Sign In / Providers → Email → Confirm email** siga activado: así nadie puede quedarse con un correo que no puede abrir.
 - En la app: `app/src/main/res/values/strings.xml` → `url_restablecer` con esa misma dirección.
 - **Firebase → Authentication → Settings → Authorized domains:** agrega `TU-PANEL.pages.dev`.
 - Opcional: **Cloudflare Access** (Zero Trust, gratis hasta 50 personas) delante del panel para que solo correos del equipo vean siquiera la página de acceso.

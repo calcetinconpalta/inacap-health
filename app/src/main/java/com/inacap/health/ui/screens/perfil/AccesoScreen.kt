@@ -1,5 +1,7 @@
 package com.inacap.health.ui.screens.perfil
 
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -137,8 +139,21 @@ fun AccesoScreen(
 
             // ----- Esperando que confirme el correo (cuenta de estudiante) -----
             if (permitirEstudiante) pendiente?.let { correo ->
+                // Al volver a la app (desde el correo o «Abrir la app»), revisa sola si ya confirmó.
+                // «Ya confirmé» queda como respaldo.
+                val ciclo = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+                LaunchedEffect(correo) {
+                    ciclo.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
+                        if (!ocupado && ReglasCuenta.contrasenaValida(contrasena)) {
+                            when (repo.completarRegistro(contrasena)) {
+                                ResultadoCuenta.Listo -> { contrasena = ""; repetir = ""; onListo() }
+                                else -> Unit   // aún no confirma: no se molesta con mensajes
+                            }
+                        }
+                    }
+                }
                 Tarjeta(titulo = "Confirma tu correo") {
-                    TextoSecundario("Te enviamos un enlace a $correo. Ábrelo desde tu correo y luego vuelve aquí.")
+                    TextoSecundario("Te enviamos un enlace a $correo. Ábrelo desde tu correo y luego vuelve aquí: revisaremos solos que lo confirmaste.")
                     TextoSecundario("Escribe la contraseña que quieres usar para terminar de crear la cuenta.")
                 }
                 CampoContrasena("Contraseña", contrasena) { contrasena = it }

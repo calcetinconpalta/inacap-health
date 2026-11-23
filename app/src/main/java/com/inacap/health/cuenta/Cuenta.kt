@@ -111,6 +111,10 @@ class CuentaRepositorio(
 
     private fun sql() = sync.clienteSql ?: throw ErrorNube(0, "Cuenta no disponible")
 
+    /** Página «Correo confirmado · Vuelve a la app» (no el panel del equipo). */
+    private fun urlConfirmado(): String? =
+        context.getString(com.inacap.health.R.string.url_confirmado).takeIf { it.startsWith("https://") }
+
     private suspend fun <T> ejecutar(bloque: suspend () -> T): ResultadoCuenta = try {
         withContext(Dispatchers.IO) { bloque() }
         ResultadoCuenta.Listo
@@ -125,7 +129,7 @@ class CuentaRepositorio(
             val sb = sql()
             sb.asegurarSesion()
             sync.asegurarUsuarioRemoto()
-            val u = sb.actualizarUsuario(JSONObject().put("email", email.trim()))
+            val u = sb.actualizarUsuario(JSONObject().put("email", email.trim()), redirigirA = urlConfirmado())
             if (u.optString("email").equals(email.trim(), true) && !u.optBoolean("is_anonymous", true)) {
                 sb.actualizarUsuario(JSONObject().put("password", contrasena))
                 sesion.cuentaEmail = email.trim(); sesion.emailPendiente = null

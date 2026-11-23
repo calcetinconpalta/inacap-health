@@ -104,9 +104,14 @@ class SupabaseCliente(
         return JSONObject(Http.exigirOk(r, "Supabase usuario").cuerpo)
     }
 
-    /** PUT /auth/v1/user: agrega correo o contraseña a la cuenta actual. */
-    fun actualizarUsuario(datos: JSONObject): JSONObject {
-        val r = conReintentoToken { token -> Http.enviar("PUT", "$url/auth/v1/user", headersBase(token), datos.toString()) }
+    private fun redirigir(a: String?) = a?.takeIf { it.isNotBlank() }?.let { "?redirect_to=" + URLEncoder.encode(it, "UTF-8") } ?: ""
+
+    /**
+     * PUT /auth/v1/user: agrega correo o contraseña a la cuenta actual. [redirigirA] es la página
+     * que abre el enlace de confirmación del correo (si no, abre la Site URL: el panel del equipo).
+     */
+    fun actualizarUsuario(datos: JSONObject, redirigirA: String? = null): JSONObject {
+        val r = conReintentoToken { token -> Http.enviar("PUT", "$url/auth/v1/user${redirigir(redirigirA)}", headersBase(token), datos.toString()) }
         return JSONObject(Http.exigirOk(r, "Supabase actualizar usuario").cuerpo)
     }
 
@@ -121,8 +126,8 @@ class SupabaseCliente(
     }
 
     /** Crea una cuenta nueva con correo (personal del equipo). */
-    fun registrarConCorreo(email: String, password: String) {
-        val r = Http.enviar("POST", "$url/auth/v1/signup", headersBase(), JSONObject().put("email", email).put("password", password).toString())
+    fun registrarConCorreo(email: String, password: String, redirigirA: String? = null) {
+        val r = Http.enviar("POST", "$url/auth/v1/signup${redirigir(redirigirA)}", headersBase(), JSONObject().put("email", email).put("password", password).toString())
         Http.exigirOk(r, "Supabase registro")
     }
 

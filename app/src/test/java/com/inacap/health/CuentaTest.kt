@@ -74,6 +74,9 @@ class CuentaTest {
         nube.confirmacionRequerida = true
         assertEquals(ResultadoCuenta.ConfirmaCorreo("ana@ejemplo.cl"), cuenta.crearCuenta("ana@ejemplo.cl", "clave1234"))
         assertEquals(EstadoCuenta.Pendiente("ana@ejemplo.cl"), cuenta.estado())
+        // El enlace del correo lleva a «Correo confirmado · Vuelve a la app», no al panel del equipo.
+        val conCorreo = nube.de("PUT", "/auth/v1/user").first { JSONObject(it.cuerpo).has("email") }
+        assertTrue(conCorreo.query, java.net.URLDecoder.decode(conCorreo.query, "UTF-8").contains("redirect_to=https://inacap-health.pages.dev/confirmado.html"))
         // Aún no abre el enlace
         assertTrue(cuenta.completarRegistro("clave1234") is ResultadoCuenta.ConfirmaCorreo)
         // Abre el enlace del correo
