@@ -23,11 +23,14 @@ data class Perfil(
     val terminosAceptadosEn: Long = 0,
     /** Consentimiento opcional para enviar datos anonimizados a la nube. */
     @ColumnInfo(defaultValue = "0")
-    val compartirNube: Boolean = false
+    val compartirNube: Boolean = false,
+    /** Tarea 18c: sede INACAP elegida de [Sedes.LISTA] ("" = sin elegir). */
+    @ColumnInfo(defaultValue = "''")
+    val sede: String = ""
 )
 
 /**
  * ¿Tiene lo necesario para recomendaciones personalizadas? Si no, Inicio muestra
  * «Completa tus datos…» (tarea 14).
  */
-fun Perfil?.datosCompletos(): Boolean = this != null && edad != null && sexo.isNotBlank()
+fun Perfil?.datosCompletos(): Boolean = this != null && edad != null && sexo.isNotBlank() && sede in Sedes.LISTA

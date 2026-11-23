@@ -145,6 +145,9 @@ async function cargarSql(dias) {
   if (!estado.sb) return null;
   const { data, error } = await estado.sb.rpc("dashboard_resumen", { dias });
   if (error) throw new Error(`Base SQL: ${error.message}`);
+  // 1.3.3: personas por sede (el servidor oculta las sedes con menos de 5). Si aún no existe, se omite.
+  const porSede = await estado.sb.rpc("resumen_por_sede");
+  if (!porSede.error) data.sedes = porSede.data;
   return data;
 }
 
@@ -232,6 +235,7 @@ function datosDemo(dias) {
       rango_edad: { "<18": 6, "18-24": 241, "25-29": 92, "30-39": 48, "40+": 14, sin_dato: 11 },
       sexo: { Femenino: 198, Masculino: 171, Otro: 9, "Prefiero no decir": 21, sin_dato: 13 },
     },
+    sedes: { minimo: 5, por_sede: { Valdivia: 377, sin_dato: 35 }, sedes_ocultas: 0 },
     imc: { registros: suma("registros_imc"), usuarios: 188, promedio: 24.3, categorias: { bajo_rango: 14, en_rango: 109, sobre_rango: 65 } },
     agua: { registros: suma("registros_agua"), promedio_diario_ml: 1450, dias_registrados: 900 },
     scoff: {
@@ -385,6 +389,14 @@ function render() {
     const sexos = Object.entries(sql.demografia.sexo).sort((a, b) => b[1] - a[1]);
     tabla("t-edad", [{ t: "Grupo" }, { t: "Usuarios", num: 1 }],
       [...edades.map((e) => [`Edad ${etiqueta("edad", e)}`, sql.demografia.rango_edad[e]]), ...sexos.map(([s, n]) => [`Sexo: ${s === "sin_dato" ? "Sin dato" : s}`, n])]);
+
+    if (sql.sedes) {
+      const filas = Object.entries(sql.sedes.por_sede || {}).sort((a, b) => b[1] - a[1])
+        .map(([s, n]) => [s === "sin_dato" ? "Sin dato" : s, n]);
+      tabla("t-sede", [{ t: "Sede" }, { t: "Usuarios", num: 1 }], filas);
+      $("#p-sede").textContent = `Se ocultan las sedes con menos de ${sql.sedes.minimo} personas` +
+        (sql.sedes.sedes_ocultas ? ` (${sql.sedes.sedes_ocultas} oculta${sql.sedes.sedes_ocultas === 1 ? "" : "s"})` : "") + ".";
+    }
 
     const canales = Object.keys(ETIQUETAS.canal);
     barras("g-deriv", canales.map((c) => etiqueta("canal", c)), canales.map((c) => sql.derivaciones.por_canal[c] || 0), { nombre: "Solicitudes" });

@@ -41,6 +41,10 @@ class AnonimizacionTest {
             assertFalse("No debe enviar '$it'", json.contains(it))
         }
         assertEquals("18-24", Anonimizacion.usuario(perfil, "1.1", 0L).getString("rango_edad"))
+        // Tarea 18c: solo la sede de la lista; cualquier otra cosa viaja como "sin_dato".
+        assertEquals("sin_dato", Anonimizacion.usuario(perfil, "1.1", 0L).getString("sede"))
+        assertEquals("Valdivia", Anonimizacion.usuario(perfil.copy(sede = "Valdivia"), "1.1", 0L).getString("sede"))
+        assertEquals("sin_dato", Anonimizacion.usuario(perfil.copy(sede = "Calle Falsa 123"), "1.1", 0L).getString("sede"))
     }
 
     @Test

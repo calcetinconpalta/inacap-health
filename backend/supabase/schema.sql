@@ -1318,3 +1318,81 @@ begin
 end $$;
 grant execute on function public.antes_de_cada_peticion() to anon, authenticated;
 notify pgrst, 'reload config';
+
+-- =====================================================================
+-- v4 (1.3.3) · Sede del alumno (para escalar a más regiones).
+--   Solo la sede (nunca dirección ni ubicación), y solo si comparte datos anonimizados.
+--   Para agregar una sede: insert into public.sedes (nombre) values ('Osorno');
+--   (y súmala a Sedes.LISTA en la app).
+-- =====================================================================
+
+create table if not exists public.sedes (
+    nombre text primary key check (char_length(nombre) between 2 and 60)
+);
+insert into public.sedes (nombre) values ('sin_dato'), ('Valdivia') on conflict do nothing;
+alter table public.sedes enable row level security;
+revoke all on public.sedes from anon, authenticated;
+grant select on public.sedes to authenticated;
+drop policy if exists sedes_select on public.sedes;
+create policy sedes_select on public.sedes for select to authenticated using (true);
+
+alter table public.usuarios add column if not exists sede text not null default 'sin_dato';
+alter table public.usuarios drop constraint if exists usuarios_sede_fkey;
+alter table public.usuarios add constraint usuarios_sede_fkey foreign key (sede) references public.sedes (nombre) on update cascade;
+
+-- Personas por sede, OCULTANDO las sedes con menos de 5 (para que no se pueda identificar a nadie).
+create or replace function public.resumen_por_sede()
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare
+    minimo constant int := 5;
+begin
+    if not public.es_admin() then
+        raise exception 'Acceso solo para administradores' using errcode = '42501';
+    end if;
+    return jsonb_build_object(
+        'minimo', minimo,
+        'por_sede', (select coalesce(jsonb_object_agg(sede, n), '{}'::jsonb)
+                     from (select sede, count(*) n from public.usuarios group by 1 having count(*) >= minimo) t),
+        'sedes_ocultas', (select count(*) from (select sede from public.usuarios group by 1 having count(*) < minimo) t)
+    );
+end $$;
+revoke all on function public.resumen_por_sede() from public, anon;
+grant execute on function public.resumen_por_sede() to authenticated;
+
+-- Revocar también borra la sede (como el rango de edad y el sexo).
+create or replace function public.eliminar_mis_datos(motivo text default 'eliminacion')
+returns void
+language plpgsql volatile security definer
+set search_path = public, auth
+as $$
+declare
+    uid uuid := auth.uid();
+begin
+    if uid is null then
+        raise exception 'Se requiere sesión' using errcode = '28000';
+    end if;
+    if motivo = 'revocacion' then
+        insert into public.eventos_privacidad (tipo) values ('revocacion');
+        delete from public.registros_biometricos where usuario_id = uid;
+        delete from public.resultados_scoff where usuario_id = uid;
+        delete from public.consentimientos where usuario_id = uid;
+        delete from public.derivaciones where usuario_id = uid and contacto_cifrado is null;
+        if to_regclass('public.resultados_cuestionario') is not null then
+            execute 'delete from public.resultados_cuestionario where usuario_id = $1' using uid;
+        end if;
+        if to_regclass('public.antecedentes_cifrados') is not null then
+            execute 'delete from public.antecedentes_cifrados where usuario_id = $1' using uid;
+        end if;
+        update public.usuarios set rango_edad = 'sin_dato', sexo = 'sin_dato', sede = 'sin_dato' where id = uid;
+    else
+        insert into public.eventos_privacidad (tipo) values ('eliminacion');
+        delete from public.usuarios where id = uid;  -- borra en cascada todo lo demás
+        -- Borra la cuenta (anónima o con correo), nunca la de alguien del personal.
+        delete from auth.users
+         where id = uid
+           and not exists (select 1 from public.personal where user_id = uid)
+           and not exists (select 1 from public.administradores where user_id = uid);
+    end if;
+end $$;
+revoke all on function public.eliminar_mis_datos(text) from public, anon;
+grant execute on function public.eliminar_mis_datos(text) to authenticated;

@@ -75,7 +75,7 @@ object TextosLegales {
         Seccion(
             "1. Datos que tratamos",
             listOf(
-                "Perfil: nombre, edad, sexo, patologías, alergias y medicamentos (todos opcionales).",
+                "Perfil: nombre, edad, sexo, sede INACAP, patologías, alergias y medicamentos (todos opcionales). La sede se elige de una lista: no usamos tu ubicación ni pedimos tu dirección.",
                 "Registros de salud: peso, estatura, IMC, consumo de agua y resultados del cuestionario SCOFF.",
                 "Actividad: pasos diarios (sensor del teléfono o, si lo vinculas, Health Connect) y frecuencia cardíaca (cámara, reloj conectado por Bluetooth o Health Connect).",
                 "Preferencias: metas de agua y pasos, nivel de actividad, recordatorios y bloqueo de la app.",
@@ -94,7 +94,7 @@ object TextosLegales {
             "3. Envío opcional de datos (anonimizado)",
             listOf(
                 "Si activas \"Compartir datos anonimizados\", se envía una copia reducida a servidores del proyecto, para generar estadísticas de bienestar estudiantil y mejorar la app:",
-                "• Registros: rango de edad (por ejemplo 18-24), sexo, IMC y su rango de referencia, vasos de agua, pasos diarios, pulso, puntaje SCOFF, solicitudes de derivación y tus consentimientos.",
+                "• Registros: rango de edad (por ejemplo 18-24), sexo, sede INACAP, IMC y su rango de referencia, vasos de agua, pasos diarios, pulso, puntaje SCOFF, solicitudes de derivación y tus consentimientos.",
                 "• Uso de la app: pantallas visitadas, funciones usadas y errores técnicos.",
                 "NUNCA se envían tu nombre, patologías, alergias, medicamentos, peso, estatura ni tus respuestas individuales del SCOFF.",
                 "Se te identifica con un código aleatorio, sin correo ni teléfono, salvo que crees una cuenta con correo. Aun así, la ley considera estos datos como personales (seudonimizados), por eso te pedimos permiso.",

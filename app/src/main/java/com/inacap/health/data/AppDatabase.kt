@@ -15,9 +15,11 @@ import com.inacap.health.seguridad.CifradoBaseDatos
         ResultadoScoff::class,
         Consentimiento::class,
         SyncPendiente::class,
-        PasosDia::class
+        PasosDia::class,
+        EstadoAnimo::class,
+        ResultadoCuestionario::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -27,6 +29,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun consentimientoDao(): ConsentimientoDao
     abstract fun syncPendienteDao(): SyncPendienteDao
     abstract fun pasosDiaDao(): PasosDiaDao
+    abstract fun estadoAnimoDao(): EstadoAnimoDao
+    abstract fun resultadoCuestionarioDao(): ResultadoCuestionarioDao
 
     companion object {
         const val NOMBRE = "inacap_health_database"
@@ -98,6 +102,22 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** v3 -> v4 (1.3.3): sede en el perfil, check-in de ánimo y resultados de cuestionarios. */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE perfil ADD COLUMN sede TEXT NOT NULL DEFAULT ''")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `estado_animo` (" +
+                        "`fecha` TEXT NOT NULL, `nivel` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`fecha`))"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `resultado_cuestionario` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `tipo` TEXT NOT NULL, `puntaje` INTEGER NOT NULL, " +
+                        "`respuestas` TEXT NOT NULL, `alerta` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `uuid` TEXT NOT NULL)"
+                )
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -105,7 +125,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     NOMBRE
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .apply {
                         // HU-01: base cifrada con SQLCipher (clave protegida por el Keystore).
                         CifradoBaseDatos.fabrica(context.applicationContext, NOMBRE)?.let { openHelperFactory(it) }

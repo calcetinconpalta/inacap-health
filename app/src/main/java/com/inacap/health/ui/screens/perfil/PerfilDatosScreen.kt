@@ -66,6 +66,7 @@ fun PerfilDatosScreen(
     var patologias by rememberSaveable { mutableStateOf("") }
     var alergias by rememberSaveable { mutableStateOf("") }
     var medicamentos by rememberSaveable { mutableStateOf("") }
+    var sede by rememberSaveable { mutableStateOf("") }
     var isLoaded by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(perfil) {
@@ -76,6 +77,7 @@ fun PerfilDatosScreen(
             patologias = perfil?.patologias ?: ""
             alergias = perfil?.alergias ?: ""
             medicamentos = perfil?.medicamentos ?: ""
+            sede = perfil?.sede ?: ""
             isLoaded = true
         }
     }
@@ -212,6 +214,29 @@ fun PerfilDatosScreen(
                 }
             }
 
+            // Sede INACAP (tarea 18c): una lista, sin GPS ni dirección.
+            Column {
+                Text("Sede INACAP", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(8.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    com.inacap.health.data.Sedes.LISTA.forEach { opcion ->
+                        FilterChip(
+                            selected = sede == opcion,
+                            onClick = { sede = if (sede == opcion) "" else opcion },
+                            label = { Text(opcion) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                selectedLabelColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                    }
+                }
+                Text(
+                    "Si compartes datos anonimizados, solo se envía la sede (nunca tu dirección ni tu ubicación).",
+                    fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
             // Patologías
             Column {
                 OutlinedTextField(
@@ -303,6 +328,7 @@ fun PerfilDatosScreen(
                             patologias = sanitizedPatologias,
                             alergias = sanitizedAlergias,
                             medicamentos = sanitizedMedicamentos,
+                            sede = sede,
                             onComplete = {
                                 if (recienCreada) onBack()
                                 else scope.launch {

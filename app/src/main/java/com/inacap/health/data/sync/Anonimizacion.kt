@@ -55,6 +55,7 @@ object Anonimizacion {
         JSONObject()
             .put("rango_edad", rangoEdad(perfil?.edad))
             .put("sexo", sexo(perfil?.sexo))
+            .put("sede", com.inacap.health.data.Sedes.paraNube(perfil?.sede))
             .put("version_app", versionApp)
             .put("plataforma", "android")
             .put("actualizado_en", fechaIso(ahora))

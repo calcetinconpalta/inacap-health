@@ -88,7 +88,8 @@ class NavegacionTest {
         val base = Perfil(nombre = "", edad = null, sexo = "", patologias = "", alergias = "", medicamentos = "", consentimiento = true)
         org.junit.Assert.assertFalse(base.datosCompletos())
         org.junit.Assert.assertFalse((null as Perfil?).datosCompletos())
-        org.junit.Assert.assertTrue(base.copy(edad = 21, sexo = "Femenino").datosCompletos())
+        org.junit.Assert.assertFalse("Falta la sede", base.copy(edad = 21, sexo = "Femenino").datosCompletos())
+        org.junit.Assert.assertTrue(base.copy(edad = 21, sexo = "Femenino", sede = "Valdivia").datosCompletos())
     }
 
     @Test fun inicioPideCompletarDatosSiFaltan() {

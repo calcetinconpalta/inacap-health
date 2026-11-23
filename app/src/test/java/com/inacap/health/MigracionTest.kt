@@ -41,7 +41,7 @@ class MigracionTest {
 
         // Abrir con Room v2 ejecuta MIGRATION_1_2 y valida contra las entidades
         val db = Room.databaseBuilder(context, AppDatabase::class.java, archivo.absolutePath)
-            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3)
+            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4)
             .allowMainThreadQueries()
             .build()
 
@@ -52,6 +52,9 @@ class MigracionTest {
             assertTrue(perfil.consentimiento)
             assertEquals("Debe pedir aceptar los términos nuevos", 0, perfil.terminosVersion)
             assertFalse(perfil.compartirNube)
+            assertEquals("1.3.3: sin sede elegida", "", perfil.sede)
+            assertTrue(db.estadoAnimoDao().getAllUnaVez().isEmpty())
+            assertTrue(db.resultadoCuestionarioDao().getAllUnaVez().isEmpty())
 
             val registros = db.registroBiometricoDao().getAllUnaVez()
             assertEquals(2, registros.size)

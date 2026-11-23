@@ -157,6 +157,7 @@ class PerfilViewModel(application: Application) : AndroidViewModel(application) 
         patologias: String,
         alergias: String,
         medicamentos: String,
+        sede: String? = null,
         onComplete: () -> Unit = {}
     ) {
         viewModelScope.launch {
@@ -170,10 +171,11 @@ class PerfilViewModel(application: Application) : AndroidViewModel(application) 
                 sexo = sexo,
                 patologias = patologias,
                 alergias = alergias,
-                medicamentos = medicamentos
+                medicamentos = medicamentos,
+                sede = sede ?: actual?.sede ?: ""
             )
             perfilDao.upsertPerfil(nuevoPerfil)
-            // Solo viajan el rango de edad y el sexo (nunca el nombre ni datos clínicos).
+            // Solo viajan el rango de edad, el sexo y la sede (nunca el nombre ni datos clínicos).
             sync.encolarActualizacionUsuario()
             onComplete()
         }
@@ -210,6 +212,8 @@ class PerfilViewModel(application: Application) : AndroidViewModel(application) 
         resultadoScoffDao.deleteAll()
         consentimientoDao.deleteAll()
         app.database.pasosDiaDao().deleteAll()
+        app.database.estadoAnimoDao().deleteAll()
+        app.database.resultadoCuestionarioDao().deleteAll()
         app.pasos.borrarTodo()
         // Health Connect: se quitan los permisos; orientación: el servidor borra las
         // conversaciones junto con la cuenta (eliminar_mis_datos).
