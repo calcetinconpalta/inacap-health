@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,6 +42,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -78,6 +80,7 @@ fun PerfilDatosScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val teclado = LocalSoftwareKeyboardController.current
 
     val opcionesSexo = listOf("Femenino", "Masculino", "Otro", "Prefiero no decir")
 
@@ -124,6 +127,7 @@ fun PerfilDatosScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .imePadding()                 // el botón Guardar queda sobre el teclado, no tapado
                 .verticalScroll(rememberScrollState())
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -282,6 +286,7 @@ fun PerfilDatosScreen(
 
             Button(
                 onClick = {
+                    teclado?.hide()
                     if (isFormValid) {
                         val sanitizedNombre = nombre.replace("\n", "").replace("\r", "").trim().take(60)
                         val sanitizedEdad = edadStr.filter { it.isDigit() }.toIntOrNull()
