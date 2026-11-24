@@ -18,3 +18,6 @@ local.properties
 .env
 .env.*
 !.env.example
+
+# Configuración local de Android Studio (cada quien la suya)
+/.idea/
