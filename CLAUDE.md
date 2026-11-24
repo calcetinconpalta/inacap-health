@@ -37,7 +37,7 @@ Trabaja en el repositorio clonado en el computador del usuario (Android Studio):
 - **Consultas parametrizadas siempre:** Room con `:parametro`; al servidor los datos van como JSON (`insertar`/`upsert`/`rpc` con `JSONObject`), nunca concatenados. La frontera de seguridad real es **RLS en el servidor**: cada quien solo ve y escribe lo suyo; el personal, según su rol.
 - **El rol lo decide el servidor,** no la app. La app nunca asume permisos por su cuenta.
 - **Privacidad:** nombre, patologías, alergias, medicamentos, peso y estatura **nunca** salen del teléfono. A la nube solo van datos anonimizados y solo si la persona activó "Compartir datos anonimizados".
-- **Correo del usuario** (`therealnacho25@gmail.com`) es privado: no lo mandes a servicios externos.
+- **Datos personales del equipo** (correos, nombres, teléfonos) son privados: no los escribas en archivos del repositorio (es **público**) ni los mandes a servicios externos.
 
 ## Arquitectura (resumen)
 
@@ -66,13 +66,14 @@ Trabaja en el repositorio clonado en el computador del usuario (Android Studio):
 
 ## Estado de git
 
-- `main` en GitHub va en `cb10036`. Hay **2 commits locales sin subir**: 1.3.1 (reasignación de id en sync) y 1.3.2 (aceptar todo + errores de red). Súbelos (`git push`) antes de empezar lo nuevo.
-- Versión actual en `app/build.gradle.kts`: `versionCode = 6`, `versionName = "1.3.2"`. La próxima tanda de abajo sube a **1.3.3**.
+- `main` en GitHub va en la **versión 1.3.3** (`versionCode = 7`), con las tareas 1 a 19 de abajo **ya hechas** (incluida la corrección de la columna `sede`, `0dfb859`). No las rehagas; sirven como contexto de qué se decidió y por qué.
+- **Pendiente de aplicar:** el parche `prueba-07-sesion-unica.patch` que te pasa el usuario. Corrige el orden de la prueba SQL 07 (el servidor estaba bien; la prueba creaba las dos sesiones a la vez). Con eso, las pruebas SQL 00 a 09 pasan en PostgreSQL 16 local con UTF‑8 (verificado fuera de tu sesión). Aplícalo con `git am` y súbelo.
+- La próxima tanda (tarea 20) sube a **1.3.4**.
 - Los commits van a nombre de Naxo, con mensajes cortos y simples, sin firmas ni coautores.
 
 ---
 
-# Tareas acordadas con el usuario (próxima versión 1.3.3)
+# Tareas acordadas con el usuario (1–19: versión 1.3.3, ya hechas · 20: próxima versión 1.3.4)
 
 Hazlas en este orden. Cada una termina con sus pruebas y, si toca UI, una verificación en el teléfono.
 
@@ -243,6 +244,39 @@ Decisión del usuario: agregarlos todos, **PHQ-9 incluido** (solo en Bienestar).
 
 ### 19. Cerrar la versión
 Cuando las tareas 1–18g estén hechas y probadas: subir a `versionCode = 7`, `versionName = "1.3.3"` y agregar la sección 1.3.3 en `docs/CAMBIOS.md` describiendo estos cambios.
+
+### 20. Rediseño de las pestañas Salud, Bienestar y Perfil  *(versión 1.3.4)*
+El rediseño de la tarea 18e solo se aplicó a Inicio; Salud, Bienestar y Perfil siguen siendo la lista simple de `HubScreen`. El usuario aprobó esta maqueta: **`docs/maqueta-pestanas.html`** (ábrela en el navegador; incluye Perfil en modo noche). Mismo lenguaje que Inicio: banda roja INACAP arriba, tarjetas blancas con relieve suave, el color de cada dato solo como acento, botón principal rojo sólido. Reemplaza `HubScreen` por una pantalla propia para cada pestaña; las rutas y destinos no cambian.
+
+**Salud**
+- Banda roja con el título "Salud", "Tus mediciones de hoy" y tres mini resúmenes dentro de la banda (agua "3/9", pasos, pulso), con fondo blanco translúcido.
+- **Tarjeta estrella: "Medir pulso con la cámara"** (es lo que más le gusta al usuario): etiqueta "Lo más usado", texto corto, botón rojo "Medir ahora" e ícono de corazón en un círculo rojo suave.
+- Tarjeta **Historial** con un adelanto de las barras de la semana actual (días bajo la meta en gris) y "Noviembre · semana N ›".
+- Dos tarjetas lado a lado: **Calculadoras** (IMC e hidratación) y **Mi reloj** (con su estado: "Conectado · hace 10 min" o "Sin conectar").
+- Fila ancha: **Enviar resumen a Bienestar** (PDF).
+
+**Bienestar**
+- Banda roja "Bienestar · Apoyo confidencial y autocuidado".
+- Primero y más visible: tarjeta **roja** "¿Necesitas conversar con alguien?" con botón blanco **Pedir atención**.
+- **Tus conversaciones**: el último mensaje recibido como burbuja, cuándo llegó y un contador de no leídos.
+- **Cuestionarios**: chips con el avance del mes (hechos con ✓). Los textos de los chips de la maqueta son ilustrativos.
+- **Aprende** como fila de artículos que se desliza (tarjeta con color e ícono, título y minutos de lectura).
+
+**Perfil: bento grid** (medidas revisadas: el usuario pidió cambiar una primera versión porque se veía dispareja)
+- Banda roja con avatar (inicial), nombre y etiquetas en una sola línea: sede y "Con correo"/"Sin cuenta".
+- Grilla de **2 columnas iguales**, filas de **igual altura** (~86 dp), separación 10 dp. **Todas las tarjetas con la misma estructura:** ícono arriba a la izquierda, y abajo el nombre y su estado en una línea (texto largo con puntos suspensivos, nunca cortado a la mitad).
+  - **Mis datos**: ocupa 2 filas; anillo de progreso al centro (% del perfil completo) y abajo "Falta: …" en rojo.
+  - **Recordatorios** ("N activos", en verde) y **Modo noche** (interruptor arriba a la derecha; cambia el tema en el momento), a la derecha de Mis datos.
+  - **Cuenta**: ancha (2 columnas), correo abreviado y "este teléfono", con flecha.
+  - **Bloqueo** ("PIN activo" en verde o "Desactivado") y **Seguridad** ("Datos cifrados").
+  - **Privacidad** ("Compartir: sí/no") y **Términos** ("Versión N").
+- Cada tarjeta muestra su **estado real** sin tener que entrar.
+- **"Eliminar mis datos" sigue dentro de Privacidad**, no suelto en la grilla (para que no se toque por error).
+
+**Para las tres**
+- Modo noche como en Inicio; texto con buen contraste; tocar cualquier tarjeta lleva a su pantalla.
+- Prueba de navegación por pestaña y capturas de Salud, Bienestar y Perfil (claro y noche) para revisarlas con el usuario en el teléfono.
+- Al terminar: `versionCode = 8`, `versionName = "1.3.4"` y sección 1.3.4 en `docs/CAMBIOS.md`.
 
 ## Fuera de alcance por ahora (no hacer todavía)
 - **Compilación release** reducida/ofuscada (R8) + firma: necesita reglas para SQLCipher/Health Connect/WorkManager y pruebas en teléfono real. Dejar para "preparar publicación".
