@@ -13,7 +13,8 @@
   --texto-2: #6b6b6b;
   --texto-3: #8a8a8a;
   --grilla: #ececec;
-  --serie-1: #2a78d6;
+  --serie-1: #9b6dff;        /* morado claro (pedido del usuario): barras y líneas, 3,5:1 sobre blanco */
+  --metrica: #7c3aed;         /* números de las métricas: texto, 5,7:1 sobre blanco */
   --serie-2: #eb6834;
   --serie-3: #1baf7a;
   --serie-4: #eda100;
@@ -34,7 +35,8 @@
     --texto-2: #c3c2b7;
     --texto-3: #9a998f;
     --grilla: #2c2c29;
-    --serie-1: #3987e5;
+    --serie-1: #b794ff;
+    --metrica: #c4a5ff;
     --serie-2: #d95926;
     --serie-3: #199e70;
     --serie-4: #c98500;
@@ -55,7 +57,8 @@
   --texto-2: #c3c2b7;
   --texto-3: #9a998f;
   --grilla: #2c2c29;
-  --serie-1: #3987e5;
+  --serie-1: #b794ff;
+  --metrica: #c4a5ff;
   --serie-2: #d95926;
   --serie-3: #199e70;
   --serie-4: #c98500;
@@ -240,3 +243,6 @@ details summary { color: var(--texto-2); font-size: 12px; cursor: pointer; }
 .insignia.warn, select.estado-warn { background: var(--warn-bg); color: var(--warn-tx); }
 .insignia.off, select.estado-off { background: var(--off-bg); color: var(--off-tx); }
 select.estado-ok, select.estado-warn, select.estado-off { border: 0; border-radius: 999px; padding: 3px 8px; font-weight: 600; }
+
+/* Números de las métricas en morado (se notan más). */
+.celda .c-valor, .mini-kpis b { color: var(--metrica); }
