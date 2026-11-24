@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>INACAP Health — Opciones de bento grid</title>
+<style>
+  :root{
+    --bg:#0b0b0d; --panel:#141417; --panel2:#1b1b1f; --border:#2a2a2e;
+    --text:#f2f2f3; --muted:#9a9aa0; --accent:#ff4d5e; --accent-dim:#3a1418;
+    --ok:#3ecf8e; --warn:#e0a63e; --accent2:#a56dff;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f5f5f7; --panel:#ffffff; --panel2:#f0f0f2; --border:#e2e2e6;
+      --text:#141416; --muted:#6b6b72; --accent:#ff4d5e; --accent-dim:#ffe3e5; --accent2:#2e9e5b;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b0b0d; --panel:#141417; --panel2:#1b1b1f; --border:#2a2a2e;
+    --text:#f2f2f3; --muted:#9a9aa0; --accent:#ff4d5e; --accent-dim:#3a1418; --accent2:#a56dff;
+  }
+  :root[data-theme="light"]{
+    --bg:#f5f5f7; --panel:#ffffff; --panel2:#f0f0f2; --border:#e2e2e6;
+    --text:#141416; --muted:#6b6b72; --accent:#ff4d5e; --accent-dim:#ffe3e5; --accent2:#2e9e5b;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  header{
+    position:sticky; top:0; z-index:10; background:var(--bg);
+    padding:16px 20px calc(16px + env(safe-area-inset-top,0px));
+    padding-top:calc(16px + env(safe-area-inset-top,0px));
+    border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
+  }
+  .brand{display:flex; align-items:center; gap:8px; font-weight:700;}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);}
+  .tabs{display:flex; gap:6px; background:var(--panel2); padding:4px; border-radius:10px; border:1px solid var(--border);}
+  .tab{padding:8px 14px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; color:var(--muted); user-select:none;}
+  .tab.active{background:var(--accent); color:#fff;}
+  main{padding:20px; max-width:1400px; margin:0 auto;}
+  .note{color:var(--muted); font-size:13px; margin-bottom:16px;}
+  .layout{display:none;}
+  .layout.active{display:block;}
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(12, 1fr);
+    grid-auto-rows: 74px;
+    gap:8px;
+  }
+  .cell{
+    background:var(--panel); border:1px solid var(--border); border-radius:10px;
+    padding:10px 12px; display:flex; flex-direction:column; justify-content:space-between;
+    overflow:hidden; min-width:0;
+  }
+  .cell.risk{border-color:#5a3338; background:var(--panel);}
+  .cell .label{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em;}
+  .cell .value{font-size:22px; font-weight:700; line-height:1.1;}
+  .cell .sub{font-size:11px; color:var(--muted);}
+  .chart-placeholder{
+    flex:1; margin-top:8px; border-radius:8px;
+    background:
+      repeating-linear-gradient(135deg, var(--border) 0 1px, transparent 1px 8px);
+    border:1px dashed var(--border);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--muted); font-size:12px;
+  }
+  .tag{display:inline-block; font-size:10px; padding:2px 7px; border-radius:999px; background:var(--panel2); color:var(--muted); width:fit-content;}
+  .tag.ok{color:var(--ok); background:#113425;}
+  .tag.warn{color:var(--warn); background:#3a2d10;}
+  .section-title{font-size:12px; font-weight:700; color:var(--muted); letter-spacing:.03em; margin:14px 0 6px; display:flex; align-items:center; gap:6px;}
+  .section-title::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--accent2); display:inline-block;}
+  .section-title:first-child{margin-top:0;}
+  #l1 .section-title{margin:6px 0 4px;}
+  #l1 .grid{grid-auto-rows: 74px; gap:6px;}
+  .cell.risk{box-shadow: inset 2px 0 0 var(--accent2);}
+  footer{text-align:center; color:var(--muted); font-size:12px; padding:30px 20px 40px;}
+  @media (max-width: 760px){
+    .grid{grid-template-columns: repeat(6,1fr);}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><span class="dot"></span> INACAP Health — Maquetas</div>
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-layout="l1">Opción A — Riesgo primero</div>
+    <div class="tab" data-layout="l2">Opción B — Compacta</div>
+    <div class="tab" data-layout="l3">Opción C — Dos columnas</div>
+  </div>
+  <div class="tabs" id="theme-toggle" style="margin-left:8px;">
+    <div class="tab active" data-theme-btn="dark">Modo noche</div>
+    <div class="tab" data-theme-btn="light">Modo claro</div>
+  </div>
+</header>
+
+<main>
+  <p class="note">Maqueta estática de distribución (sin datos reales). Cada bloque representa un widget; el tamaño indica el espacio reservado según el tipo de contenido. Cambia de pestaña para comparar las tres opciones.</p>
+
+  <!-- LAYOUT A -->
+  <section class="layout active" id="l1">
+    <div class="section-title">Seguimiento y moderación</div>
+    <div class="grid">
+      <div class="cell risk" style="grid-column: span 2;">
+        <div class="label">Derivaciones</div>
+        <div class="value">22</div>
+        <div class="sub">solicitudes de apoyo</div>
+      </div>
+      <div class="cell risk" style="grid-column: span 2;">
+        <div class="label">Tests SCOFF</div>
+        <div class="value">147</div>
+        <div class="sub">18% sugiere consultar</div>
+      </div>
+      <div class="cell risk" style="grid-column: span 2;">
+        <div class="label">Con contacto</div>
+        <div class="value">11</div>
+        <div class="sub">3 pendientes de gestión</div>
+      </div>
+      <div class="cell risk" style="grid-column: span 2;">
+        <div class="label">IPs bloqueadas</div>
+        <div class="value">1</div>
+        <div class="sub">bloqueos vigentes</div>
+      </div>
+      <div class="cell risk" style="grid-column: span 2;">
+        <div class="label">Rechazos 24h</div>
+        <div class="value">17</div>
+        <div class="sub">por límites/validación</div>
+      </div>
+      <div class="cell risk" style="grid-column: span 2;">
+        <div class="label">Borrados</div>
+        <div class="value">7</div>
+        <div class="sub">en 30 días</div>
+      </div>
+    </div>
+
+    <div class="section-title">Actividad</div>
+    <div class="grid">
+      <div class="cell" style="grid-column: span 8; grid-row: span 2;">
+        <div class="label">Actividad diaria</div>
+        <div class="chart-placeholder">línea · vasos de agua / día</div>
+      </div>
+      <div class="cell" style="grid-column: span 4; grid-row: span 2;">
+        <div class="label">Resumen de salud</div>
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:6px;">
+          <div><span class="label">IMC promedio</span><div class="value" style="font-size:16px;">24,3</div></div>
+          <div><span class="label">Pulso promedio</span><div class="value" style="font-size:16px;">74 lpm</div></div>
+          <div><span class="label">Pasos diarios</span><div class="value" style="font-size:16px;">6.380</div></div>
+          <div><span class="label">Agua diaria</span><div class="value" style="font-size:16px;">1.450 ml</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Comparativas</div>
+    <div class="grid">
+      <div class="cell" style="grid-column: span 4;">
+        <div class="label">IMC por rango</div>
+        <div class="chart-placeholder">barras</div>
+      </div>
+      <div class="cell" style="grid-column: span 4;">
+        <div class="label">Puntaje SCOFF</div>
+        <div class="chart-placeholder">barras</div>
+      </div>
+      <div class="cell" style="grid-column: span 4;">
+        <div class="label">Rango de edad</div>
+        <div class="chart-placeholder">barras</div>
+      </div>
+    </div>
+
+    <div class="section-title">Tendencia clínica y cobertura</div>
+    <div class="grid">
+      <div class="cell" style="grid-column: span 7;">
+        <div class="label">SCOFF + Derivaciones (tendencia)</div>
+        <div class="chart-placeholder">línea, eje compartido</div>
+      </div>
+      <div class="cell" style="grid-column: span 5;">
+        <div class="label">Por sede</div>
+        <div style="margin-top:8px; font-size:13px; display:flex; flex-direction:column; gap:6px;">
+          <div style="display:flex; justify-content:space-between;"><span>Valdivia</span><span>377</span></div>
+          <div style="display:flex; justify-content:space-between; color:var(--muted);"><span>Sin dato</span><span>35</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Uso del sistema</div>
+    <div class="grid">
+      <div class="cell" style="grid-column: span 6;">
+        <div class="label">Orientación entre pares</div>
+        <div class="value">38</div>
+        <div class="sub">2 esperan tutor · 4 derivadas</div>
+      </div>
+      <div class="cell" style="grid-column: span 6;">
+        <div class="label">Eventos de uso</div>
+        <div class="value">11.815</div>
+        <div class="sub">95 instalaciones activas</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LAYOUT B -->
+  <section class="layout" id="l2">
+    <div class="section-title">Franja de riesgo (compacta, una sola fila)</div>
+    <div class="grid">
+      <div class="cell risk" style="grid-column: span 2; grid-row: span 1;">
+        <div class="label">Derivaciones</div><div class="value">22</div>
+      </div>
+      <div class="cell risk" style="grid-column: span 2;">
+        <div class="label">SCOFF</div><div class="value">147</div>
+      </div>
+      <div class="cell risk" style="grid-column: span 2;">
+        <div class="label">Con contacto</div><div class="value">11</div>
+      </div>
+      <div class="cell risk" style="grid-column: span 2;">
+        <div class="label">IPs bloq.</div><div class="value">1</div>
+      </div>
+      <div class="cell risk" style="grid-column: span 2;">
+        <div class="label">Rechazos</div><div class="value">17</div>
+      </div>
+      <div class="cell risk" style="grid-column: span 2;">
+        <div class="label">Borrados</div><div class="value">7</div>
+      </div>
+
+      <div class="cell" style="grid-column: span 12; grid-row: span 2;">
+        <div class="label">Actividad diaria — vasos de agua / IMC, SCOFF y derivaciones (dos paneles internos lado a lado)</div>
+        <div style="display:flex; gap:10px; flex:1; margin-top:8px;">
+          <div class="chart-placeholder" style="flex:1;">línea · agua</div>
+          <div class="chart-placeholder" style="flex:1;">línea · SCOFF/derivaciones</div>
+        </div>
+      </div>
+
+      <div class="cell" style="grid-column: span 3;">
+        <div class="label">IMC promedio</div><div class="value">24,3</div>
+      </div>
+      <div class="cell" style="grid-column: span 3;">
+        <div class="label">Pulso</div><div class="value">74 lpm</div>
+      </div>
+      <div class="cell" style="grid-column: span 3;">
+        <div class="label">Pasos</div><div class="value">6.380</div>
+      </div>
+      <div class="cell" style="grid-column: span 3;">
+        <div class="label">Agua diaria</div><div class="value">1.450 ml</div>
+      </div>
+
+      <div class="cell" style="grid-column: span 4;">
+        <div class="label">IMC por rango</div>
+        <div class="chart-placeholder">barras</div>
+      </div>
+      <div class="cell" style="grid-column: span 4;">
+        <div class="label">SCOFF</div>
+        <div class="chart-placeholder">barras</div>
+      </div>
+      <div class="cell" style="grid-column: span 4;">
+        <div class="label">Edad</div>
+        <div class="chart-placeholder">barras</div>
+      </div>
+
+      <div class="cell" style="grid-column: span 4;">
+        <div class="label">Por sede</div>
+        <div style="margin-top:8px; font-size:13px;">Valdivia: 377 · Sin dato: 35</div>
+      </div>
+      <div class="cell" style="grid-column: span 4;">
+        <div class="label">Orientación entre pares</div><div class="value">38</div>
+      </div>
+      <div class="cell" style="grid-column: span 4;">
+        <div class="label">Eventos de uso</div><div class="value">11.815</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LAYOUT C -->
+  <section class="layout" id="l3">
+    <div class="section-title">Columna izquierda: clínico/riesgo (8 col) — Columna derecha: operativo (4 col)</div>
+    <div class="grid">
+
+      <div class="cell risk" style="grid-column: span 2;">
+        <div class="label">Derivaciones</div><div class="value">22</div>
+      </div>
+      <div class="cell risk" style="grid-column: span 2;">
+        <div class="label">SCOFF</div><div class="value">147</div>
+      </div>
+      <div class="cell risk" style="grid-column: span 2;">
+        <div class="label">Con contacto</div><div class="value">11</div>
+      </div>
+      <div class="cell risk" style="grid-column: span 2;">
+        <div class="label">Borrados</div><div class="value">7</div>
+      </div>
+
+      <div class="cell" style="grid-column: span 4; grid-row: 2 / span 2;">
+        <div class="label">Equipo / pre-registros</div>
+        <div class="chart-placeholder">tabla resumida</div>
+      </div>
+
+      <div class="cell" style="grid-column: span 8; grid-row: 2 / span 2;">
+        <div class="label">Actividad diaria (agua)</div>
+        <div class="chart-placeholder" style="min-height:140px;">línea</div>
+      </div>
+
+      <div class="cell" style="grid-column: span 4;">
+        <div class="label">IPs bloqueadas</div><div class="value">1</div>
+      </div>
+      <div class="cell" style="grid-column: span 4;">
+        <div class="label">Rechazos 24h</div><div class="value">17</div>
+      </div>
+
+      <div class="cell" style="grid-column: span 3;">
+        <div class="label">Pasos diarios promedio</div><div class="value">6.380</div>
+      </div>
+      <div class="cell" style="grid-column: span 3;">
+        <div class="label">Pulso promedio</div><div class="value">74 lpm</div>
+      </div>
+      <div class="cell" style="grid-column: span 3;">
+        <div class="label">Agua diaria</div><div class="value">1.450 ml</div>
+      </div>
+      <div class="cell" style="grid-column: span 3;">
+        <div class="label">IMC promedio</div><div class="value">24,3</div>
+      </div>
+
+      <div class="cell" style="grid-column: span 3;">
+        <div class="label">IMC por rango</div>
+        <div class="chart-placeholder">barras</div>
+      </div>
+      <div class="cell" style="grid-column: span 3;">
+        <div class="label">SCOFF</div>
+        <div class="chart-placeholder">barras</div>
+      </div>
+      <div class="cell" style="grid-column: span 2;">
+        <div class="label">Edad</div>
+        <div class="chart-placeholder">barras</div>
+      </div>
+
+      <div class="cell" style="grid-column: span 4;">
+        <div class="label">Acciones auditadas</div><div class="value">4</div>
+      </div>
+      <div class="cell" style="grid-column: span 4;">
+        <div class="label">Por sede</div>
+        <div style="margin-top:8px; font-size:13px;">Valdivia: 377</div>
+      </div>
+      <div class="cell" style="grid-column: span 4;">
+        <div class="label">Eventos de uso</div><div class="value">11.815</div>
+      </div>
+      <div class="cell" style="grid-column: span 6;">
+        <div class="label">Orientación entre pares</div><div class="value">38</div>
+      </div>
+      <div class="cell" style="grid-column: span 6;">
+        <div class="label">Tendencia SCOFF/derivaciones</div>
+        <div class="chart-placeholder">línea</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>Maqueta de referencia · INACAP Health · no incluye datos reales</footer>
+
+<script>
+  document.querySelectorAll('.tab[data-layout]').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab[data-layout]').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('.layout').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      document.getElementById(t.dataset.layout).classList.add('active');
+    });
+  });
+  document.querySelectorAll('.tab[data-theme-btn]').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab[data-theme-btn]').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      document.documentElement.setAttribute('data-theme', t.dataset.themeBtn);
+    });
+  });
+</script>
+</body>
+</html>

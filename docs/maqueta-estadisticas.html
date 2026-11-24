@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maqueta Estadísticas</title>
+<meta name="robots" content="noindex">
+<!-- Maqueta del rediseño de la pestaña Estadísticas del panel (CLAUDE-dashboard.md, Opción A).
+     Datos de ejemplo. No es el panel real: se pasa a dashboard/ cuando el usuario la apruebe. -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#f5f5f7; --panel:#ffffff; --panel2:#f0f0f2; --border:#e2e2e6;
+    --text:#141416; --muted:#61616a; --rojo:#d6001c;
+    --accent2:#2e9e5b;                       /* día: verde */
+    --serie1:#d6001c; --serie2:#1769e0; --serie3:#b45f00; --barra:#d6001c; --grilla:#e6e6ea;
+    --ok-bg:#e3f4ea; --ok-tx:#1e6b3d; --warn-bg:#fdf0d5; --warn-tx:#8a5a00; --off-bg:#ececef; --off-tx:#55555c;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0b0b0d; --panel:#141417; --panel2:#1b1b1f; --border:#2a2a2e;
+      --text:#f2f2f3; --muted:#a0a0a8; --rojo:#ff4d5e;
+      --accent2:#a56dff;                     /* noche: morado */
+      --serie1:#ff6b7a; --serie2:#6aa8ff; --serie3:#f0b04a; --barra:#ff6b7a; --grilla:#26262b;
+      --ok-bg:#163524; --ok-tx:#7fdca6; --warn-bg:#3a2c10; --warn-tx:#f3c46a; --off-bg:#26262b; --off-tx:#b4b4bb;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b0b0d; --panel:#141417; --panel2:#1b1b1f; --border:#2a2a2e;
+    --text:#f2f2f3; --muted:#a0a0a8; --rojo:#ff4d5e;
+    --accent2:#a56dff;
+    --serie1:#ff6b7a; --serie2:#6aa8ff; --serie3:#f0b04a; --barra:#ff6b7a; --grilla:#26262b;
+    --ok-bg:#163524; --ok-tx:#7fdca6; --warn-bg:#3a2c10; --warn-tx:#f3c46a; --off-bg:#26262b; --off-tx:#b4b4bb;
+    color-scheme: dark;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--border);
+    padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .marca{display:flex;align-items:center;gap:8px;font-weight:700}
+  .marca i{width:10px;height:10px;border-radius:50%;background:var(--rojo);display:inline-block}
+  .pestanas{display:flex;gap:4px;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:4px}
+  .pestanas span{padding:6px 12px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted)}
+  .pestanas span.activa{background:var(--rojo);color:#fff}
+  header button{margin-left:auto;background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font:inherit;cursor:pointer}
+  main{max-width:1400px;margin:0 auto;padding:16px}
+  .nota{color:var(--muted);font-size:13px;margin:0 0 12px}
+
+  /* Títulos de sección: FUERA del grid, con punto de acento y poca separación. */
+  h2.seccion{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;letter-spacing:.02em;
+    text-transform:uppercase;color:var(--muted);margin:22px 0 6px}
+  h2.seccion::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent2)}
+  section:first-of-type h2.seccion{margin-top:4px}
+
+  /* Cada sección tiene su propio sub-grid de 12 columnas; filas fijas SOLO para tarjetas. */
+  .grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-auto-rows:96px;gap:8px}
+  .celda{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px 12px;
+    display:flex;flex-direction:column;min-width:0;overflow:hidden}
+  .celda h3{margin:0;font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .celda .valor{font-size:26px;font-weight:700;line-height:1.1;margin-top:auto}
+  .celda .sub{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .celda .grafico{position:relative;flex:1;min-height:0;margin-top:6px}
+  /* Seguimiento y moderación: borde interior de acento (antes era rojo). */
+  .seguimiento .celda{box-shadow:inset 2px 0 0 var(--accent2)}
+
+  /* Tres densidades de celda: pequeña = 1 fila (KPI), mediana = 2 filas (gráficos y resumen), grande = 2 filas a lo ancho (Actividad diaria). */
+  .c2{grid-column:span 2}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c7{grid-column:span 7}.c8{grid-column:span 8}
+  .r2{grid-row:span 2}.r4{grid-row:span 4}
+
+  .mini{display:grid;grid-template-rows:repeat(4,1fr);gap:6px;flex:1;margin-top:6px}
+  .mini div{display:flex;justify-content:space-between;align-items:center;background:var(--panel2);border-radius:8px;padding:0 10px}
+  .mini b{font-size:16px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .insignia{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600}
+  .ok{background:var(--ok-bg);color:var(--ok-tx)} .warn{background:var(--warn-bg);color:var(--warn-tx)} .off{background:var(--off-bg);color:var(--off-tx)}
+  .tablas{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:8px 12px}
+
+  /* Pantallas angostas: 6 columnas y luego 2; todo sigue legible sin scroll horizontal. */
+  @media (max-width:900px){
+    .grid{grid-template-columns:repeat(6,minmax(0,1fr))}
+    .c2{grid-column:span 2}.c4,.c5,.c6,.c7,.c8{grid-column:span 6}
+  }
+  @media (max-width:520px){
+    .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .c2{grid-column:span 1}.c4,.c5,.c6,.c7,.c8{grid-column:span 2}
+    .r4{grid-row:span 3}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="marca"><i></i>INACAP Health · Panel</div>
+  <nav class="pestanas"><span class="activa">Estadísticas</span><span>Equipo</span><span>Seguridad</span><span>Derivaciones</span></nav>
+  <button id="tema" type="button">Modo noche</button>
+</header>
+<main>
+  <p class="nota">Maqueta del rediseño (Opción A) con datos de ejemplo · últimos 30 días. Cambia el modo para revisar el contraste de los gráficos.</p>
+
+  <section class="seguimiento">
+    <h2 class="seccion">Seguimiento y moderación</h2>
+    <div class="grid">
+      <div class="celda c2"><h3>Derivaciones</h3><div class="valor">22</div><div class="sub">solicitudes de apoyo</div></div>
+      <div class="celda c2"><h3>Tests SCOFF</h3><div class="valor">147</div><div class="sub">18% sugiere consultar</div></div>
+      <div class="celda c2"><h3>Con contacto</h3><div class="valor">11</div><div class="sub">3 pendientes de gestión</div></div>
+      <div class="celda c2"><h3>IPs bloqueadas</h3><div class="valor">1</div><div class="sub">bloqueos vigentes</div></div>
+      <div class="celda c2"><h3>Rechazos 24 h</h3><div class="valor">17</div><div class="sub">por límites o validación</div></div>
+      <div class="celda c2"><h3>Borrados</h3><div class="valor">7</div><div class="sub">en 30 días</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="seccion">Actividad</h2>
+    <div class="grid">
+      <div class="celda c8 r2"><h3>Actividad diaria · vasos de agua por día</h3><div class="grafico"><canvas id="g-agua"></canvas></div></div>
+      <div class="celda c4 r2"><h3>Resumen de salud</h3>
+        <div class="mini">
+          <div><span>IMC promedio</span><b>24,3</b></div>
+          <div><span>Pulso promedio</span><b>74 lpm</b></div>
+          <div><span>Pasos diarios</span><b>6.380</b></div>
+          <div><span>Agua diaria</span><b>1,45 L</b></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="seccion">Comparativas</h2>
+    <div class="grid">
+      <div class="celda c4 r2"><h3>IMC por rango de referencia</h3><div class="grafico"><canvas id="g-imc"></canvas></div></div>
+      <div class="celda c4 r2"><h3>Puntaje SCOFF</h3><div class="grafico"><canvas id="g-scoff"></canvas></div></div>
+      <div class="celda c4 r2"><h3>Rango de edad</h3><div class="grafico"><canvas id="g-edad"></canvas></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="seccion">Tendencia clínica y cobertura</h2>
+    <div class="grid">
+      <div class="celda c7 r2"><h3>Tests SCOFF y derivaciones por día (escala 0–6)</h3><div class="grafico"><canvas id="g-scoff-deriv"></canvas></div></div>
+      <div class="celda c5 r2"><h3>Por sede</h3>
+        <table style="margin-top:6px">
+          <thead><tr><th>Sede</th><th style="text-align:right">Usuarios</th></tr></thead>
+          <tbody><tr><td>Valdivia</td><td class="num">377</td></tr><tr><td>Sin dato</td><td class="num">35</td></tr></tbody>
+        </table>
+        <div class="sub" style="margin-top:auto;white-space:normal">Se ocultan las sedes con menos de 5 personas.</div>
+      </div>
+      <div class="celda c7 r2"><h3>Registros de IMC por día (escala 0–14)</h3><div class="grafico"><canvas id="g-imc-dia"></canvas></div></div>
+      <div class="celda c5 r2"><h3>Derivaciones por canal</h3><div class="grafico"><canvas id="g-canal"></canvas></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="seccion">Uso del sistema</h2>
+    <div class="grid">
+      <div class="celda c6"><h3>Orientación entre pares</h3><div class="valor">38</div><div class="sub">2 esperan tutor · 4 derivadas</div></div>
+      <div class="celda c6"><h3>Eventos de uso</h3><div class="valor">11.815</div><div class="sub">95 instalaciones activas</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="seccion">Tablas de las otras pestañas (fuera del bento)</h2>
+    <div class="tablas">
+      <table>
+        <thead><tr><th>Nombre</th><th>Rol</th><th>Estado</th><th>Derivación</th></tr></thead>
+        <tbody>
+          <tr><td>Camila Rojas</td><td>Tutor par</td><td><span class="insignia ok">Activo</span></td><td><span class="insignia ok">En contacto</span></td></tr>
+          <tr><td>Prof. Soto</td><td>Docente supervisor</td><td><span class="insignia ok">Activo</span></td><td><span class="insignia warn">Pendiente</span></td></tr>
+          <tr><td>Tutor 2025</td><td>Tutor par</td><td><span class="insignia off">Sin acceso</span></td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+<script>
+  // ---------- Tema: claro / noche (se recuerda en este navegador) ----------
+  const raiz = document.documentElement;
+  const btn = document.getElementById("tema");
+  const oscuroActual = () => raiz.dataset.theme ? raiz.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  try { const g = localStorage.getItem("maqueta-tema"); if (g) raiz.dataset.theme = g; } catch {}
+  const rotulo = () => { btn.textContent = oscuroActual() ? "Modo día" : "Modo noche"; };
+  btn.onclick = () => {
+    raiz.dataset.theme = oscuroActual() ? "light" : "dark";
+    try { localStorage.setItem("maqueta-tema", raiz.dataset.theme); } catch {}
+    rotulo(); dibujar();
+  };
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (!raiz.dataset.theme) { rotulo(); dibujar(); } });
+
+  // ---------- Datos de ejemplo ----------
+  const dias = Array.from({ length: 30 }, (_, i) => `${i + 1}`);
+  const ruido = (s) => () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+  const r1 = ruido(7), r2 = ruido(11), r3 = ruido(19);
+  const agua = dias.map((_, i) => Math.round(38 + 12 * Math.sin(i / 3) + r1() * 10));
+  const scoff = dias.map(() => Math.round(r2() * 6));
+  const deriv = dias.map(() => Math.round(r3() * 2));
+  const imcDia = dias.map((_, i) => Math.round(5 + 4 * Math.sin(i / 4) + r1() * 5));
+
+  // ---------- Gráficos (colores leídos de las variables del modo activo) ----------
+  const graficos = {};
+  const css = (v) => getComputedStyle(raiz).getPropertyValue(v).trim();
+  function base(tipo, datos, ejeMax) {
+    const tx = css("--muted"), gr = css("--grilla");
+    return {
+      type: tipo, data: datos,
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: datos.datasets.length > 1, labels: { color: tx, boxWidth: 10 } } },
+        scales: {
+          x: { ticks: { color: tx, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 }, grid: { display: false } },
+          y: { beginAtZero: true, max: ejeMax, ticks: { color: tx, precision: 0 }, grid: { color: gr } }
+        }
+      }
+    };
+  }
+  const linea = (nombre, valores, color) => ({ label: nombre, data: valores, borderColor: color, backgroundColor: color, pointRadius: 0, borderWidth: 2, cubicInterpolationMode: "monotone" });
+  const barra = (valores) => ({ label: "", data: valores, backgroundColor: css("--barra"), borderRadius: 6, maxBarThickness: 36 });
+  function poner(id, config) { graficos[id]?.destroy(); graficos[id] = new Chart(document.getElementById(id), config); }
+  function dibujar() {
+    poner("g-agua", base("line", { labels: dias, datasets: [linea("Vasos de agua", agua, css("--serie2"))] }));
+    poner("g-imc", base("bar", { labels: ["Bajo", "En rango", "Sobre"], datasets: [barra([14, 109, 65])] }));
+    poner("g-scoff", base("bar", { labels: ["0", "1", "2", "3", "4", "5"], datasets: [barra([76, 45, 16, 8, 2, 0])] }));
+    poner("g-edad", base("bar", { labels: ["<18", "18–24", "25–29", "30–39", "40+"], datasets: [barra([6, 241, 92, 48, 14])] }));
+    // Separados a propósito: SCOFF+derivaciones (0–6) e IMC (0–14) no comparten bien un mismo eje.
+    poner("g-scoff-deriv", base("line", { labels: dias, datasets: [linea("Tests SCOFF", scoff, css("--serie1")), linea("Derivaciones", deriv, css("--serie3"))] }, 6));
+    poner("g-imc-dia", base("line", { labels: dias, datasets: [linea("Registros de IMC", imcDia, css("--serie2"))] }, 14));
+    poner("g-canal", base("bar", { labels: ["Presencial", "Por correo", "CESFAM"], datasets: [barra([12, 7, 3])] }));
+  }
+  rotulo(); dibujar();
+</script>
+</body>
+</html>
