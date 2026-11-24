@@ -69,48 +69,58 @@
       <div id="vista-seguridad" class="vista-admin" hidden></div>
       <div id="vista-estadisticas">
 
-      <!-- KPIs -->
-      <section class="kpis" id="kpis" aria-label="Indicadores principales"></section>
+      <!-- Estadísticas en bento grid (CLAUDE-dashboard.md, Opción A). Los títulos van fuera del grid. -->
+      <section class="seguimiento" aria-label="Seguimiento y moderación">
+        <h2 class="sec-bento">Seguimiento y moderación</h2>
+        <div class="bento" id="seguimiento"></div>
+      </section>
 
-      <!-- Base SQL -->
-      <h2 class="seccion"><span class="etiqueta-bd">SQL · Supabase</span> Salud y bienestar</h2>
-      <div class="grilla">
-        <article class="tarjeta ancho-2">
-          <header><h3>Actividad diaria</h3><p>Registros enviados por día (hora de Chile)</p></header>
-          <div class="dos-graficos">
-            <div><p class="mini-titulo">Vasos de agua registrados</p><div class="grafico"><canvas id="g-serie-agua"></canvas></div></div>
-            <div><p class="mini-titulo">IMC, tests SCOFF y derivaciones</p><div class="grafico"><canvas id="g-serie"></canvas></div></div>
-          </div>
-          <details><summary>Ver tabla</summary><div class="tabla" id="t-serie"></div></details>
-        </article>
-        <article class="tarjeta">
-          <header><h3>IMC por rango de referencia</h3><p id="p-imc">Último IMC de cada usuario en el período</p></header>
-          <div class="grafico"><canvas id="g-imc"></canvas></div>
-          <details><summary>Ver tabla</summary><div class="tabla" id="t-imc"></div></details>
-        </article>
-        <article class="tarjeta">
-          <header><h3>Puntaje SCOFF</h3><p id="p-scoff">Tests del período · 2 o más sugiere conversar con un profesional</p></header>
-          <div class="grafico"><canvas id="g-scoff"></canvas></div>
-          <details><summary>Ver tabla</summary><div class="tabla" id="t-scoff"></div></details>
-        </article>
-        <article class="tarjeta">
-          <header><h3>Rango de edad</h3><p>Usuarios que comparten datos</p></header>
-          <div class="grafico"><canvas id="g-edad"></canvas></div>
-          <details><summary>Ver tabla</summary><div class="tabla" id="t-edad"></div></details>
-        </article>
-        <article class="tarjeta">
-          <header><h3>Por sede</h3><p id="p-sede">Se ocultan las sedes con menos de 5 personas.</p></header>
-          <div class="tabla" id="t-sede"></div>
-        </article>
-        <article class="tarjeta">
-          <header><h3>Derivaciones por canal</h3><p>Solicitudes de apoyo profesional</p></header>
-          <div class="grafico"><canvas id="g-deriv"></canvas></div>
-          <details><summary>Ver tabla</summary><div class="tabla" id="t-deriv"></div></details>
-        </article>
-      </div>
+      <section aria-label="Actividad">
+        <h2 class="sec-bento">Actividad</h2>
+        <div class="bento">
+          <div class="celda c8 r2"><h3>Actividad diaria · vasos de agua registrados por día</h3><div class="grafico"><canvas id="g-serie-agua"></canvas></div></div>
+          <div class="celda c4 r2"><h3>Resumen de salud</h3><div class="mini-kpis" id="resumen-salud"></div></div>
+        </div>
+      </section>
+
+      <section aria-label="Comparativas">
+        <h2 class="sec-bento">Comparativas</h2>
+        <div class="bento">
+          <div class="celda c4 r2"><h3 id="p-imc">IMC por rango de referencia</h3><div class="grafico"><canvas id="g-imc"></canvas></div></div>
+          <div class="celda c4 r2"><h3 id="p-scoff">Puntaje SCOFF</h3><div class="grafico"><canvas id="g-scoff"></canvas></div></div>
+          <div class="celda c4 r2"><h3>Rango de edad</h3><div class="grafico"><canvas id="g-edad"></canvas></div></div>
+        </div>
+      </section>
+
+      <section aria-label="Tendencia clínica y cobertura">
+        <h2 class="sec-bento">Tendencia clínica y cobertura</h2>
+        <div class="bento">
+          <!-- Separados a propósito: SCOFF y derivaciones (pocas por día) no comparten bien el eje con el IMC. -->
+          <div class="celda c7 r2"><h3>Tests SCOFF y derivaciones por día</h3><div class="grafico"><canvas id="g-serie-scoff"></canvas></div></div>
+          <div class="celda c5 r2"><h3>Por sede</h3><div class="tabla" id="t-sede"></div><div class="c-detalle" id="p-sede" style="margin-top:auto;white-space:normal">Se ocultan las sedes con menos de 5 personas.</div></div>
+          <div class="celda c7 r2"><h3>Registros de IMC por día</h3><div class="grafico"><canvas id="g-serie-imc"></canvas></div></div>
+          <div class="celda c5 r2"><h3>Derivaciones por canal</h3><div class="grafico"><canvas id="g-deriv"></canvas></div></div>
+        </div>
+      </section>
+
+      <section aria-label="Uso del sistema">
+        <h2 class="sec-bento">Uso del sistema</h2>
+        <div class="bento" id="uso-sistema"></div>
+      </section>
+
+      <details class="tablas-detalle">
+        <summary>Ver las tablas de datos de los gráficos</summary>
+        <div class="grilla">
+          <article class="tarjeta ancho-2"><header><h3>Actividad diaria</h3></header><div class="tabla" id="t-serie"></div></article>
+          <article class="tarjeta"><header><h3>IMC por rango</h3></header><div class="tabla" id="t-imc"></div></article>
+          <article class="tarjeta"><header><h3>Puntaje SCOFF</h3></header><div class="tabla" id="t-scoff"></div></article>
+          <article class="tarjeta"><header><h3>Edad y sexo</h3></header><div class="tabla" id="t-edad"></div></article>
+          <article class="tarjeta"><header><h3>Derivaciones por canal</h3></header><div class="tabla" id="t-deriv"></div></article>
+        </div>
+      </details>
 
       <!-- Base NoSQL -->
-      <h2 class="seccion"><span class="etiqueta-bd">NoSQL · Firestore</span> Uso de la app</h2>
+      <h2 class="sec-bento">Uso de la app (detalle)</h2>
       <div class="grilla">
         <article class="tarjeta ancho-2">
           <header><h3>Eventos y usuarios activos por día</h3><p id="p-eventos">Eventos de uso registrados</p></header>
@@ -136,7 +146,7 @@
       </div>
 
       <!-- Gobernanza -->
-      <h2 class="seccion"><span class="etiqueta-bd">Privacidad</span> ¿Qué pasa con los datos?</h2>
+      <h2 class="sec-bento">¿Qué pasa con los datos?</h2>
       <div class="grilla">
         <article class="tarjeta">
           <header><h3>Consentimientos y derechos</h3><p>Decisiones de los usuarios sobre sus datos</p></header>

@@ -148,6 +148,9 @@ async function cargarSql(dias) {
   // 1.3.3: personas por sede (el servidor oculta las sedes con menos de 5). Si aún no existe, se omite.
   const porSede = await estado.sb.rpc("resumen_por_sede");
   if (!porSede.error) data.sedes = porSede.data;
+  // IPs bloqueadas y rechazos para «Seguimiento y moderación» (solo administradores).
+  const seg = await estado.sb.rpc("resumen_seguridad");
+  if (!seg.error) data.seguridad = seg.data;
   return data;
 }
 
@@ -236,6 +239,7 @@ function datosDemo(dias) {
       sexo: { Femenino: 198, Masculino: 171, Otro: 9, "Prefiero no decir": 21, sin_dato: 13 },
     },
     sedes: { minimo: 5, por_sede: { Valdivia: 377, sin_dato: 35 }, sedes_ocultas: 0 },
+    seguridad: { rechazos_24h: 17, ips_bloqueadas: [{ ip: "203.0.113.45" }] },
     imc: { registros: suma("registros_imc"), usuarios: 188, promedio: 24.3, categorias: { bajo_rango: 14, en_rango: 109, sobre_rango: 65 } },
     agua: { registros: suma("registros_agua"), promedio_diario_ml: 1450, dias_registrados: 900 },
     scoff: {
@@ -335,42 +339,56 @@ function lineas(id, etiquetas, series) {
 // ------------------------------------------------------------------
 // Render
 // ------------------------------------------------------------------
-function kpi(etiquetaTxt, valor, detalle) {
-  return `<div class="kpi"><div class="k-etiqueta">${escapar(etiquetaTxt)}</div><div class="k-valor">${escapar(valor)}</div><div class="k-detalle">${escapar(detalle)}</div></div>`;
+/** Celda de un indicador en el bento ([ancho] en columnas de 12). */
+function celda(etiquetaTxt, valor, detalle, ancho = 2) {
+  return `<div class="celda c${ancho}"><h3>${escapar(etiquetaTxt)}</h3><div class="c-valor">${escapar(valor)}</div><div class="c-detalle">${escapar(detalle)}</div></div>`;
 }
+function miniKpi(etiquetaTxt, valor) {
+  return `<div><span>${escapar(etiquetaTxt)}</span><b>${escapar(valor)}</b></div>`;
+}
+const litros = (ml) => (ml / 1000).toFixed(2).replace(/0$/, "").replace(".", ",");
 
 function render() {
   const { sql, eventos } = estado.ultimo;
   const ev = eventos ? agregarEventos(eventos, estado.dias, estado.modo === "demo") : null;
   const d = estado.dias;
 
-  // KPIs
-  const k = [];
-  if (sql) {
-    k.push(kpi("Usuarios que comparten", num(sql.usuarios.total), `+${num(sql.usuarios.nuevos)} en ${d} días`));
-    k.push(kpi("Activos en el período", num(sql.usuarios.activos), `${pct(sql.usuarios.activos, sql.usuarios.total)} del total`));
-    k.push(kpi("IMC promedio", sql.imc.promedio != null ? String(sql.imc.promedio).replace(".", ",") : "—", `${num(sql.imc.usuarios)} usuarios con registro`));
-    k.push(kpi("Agua diaria promedio", sql.agua.promedio_diario_ml ? `${num(sql.agua.promedio_diario_ml)} ml` : "—", `${num(sql.agua.registros)} registros`));
-    k.push(kpi("Tests SCOFF", num(sql.scoff.tests), `${pct(sql.scoff.sugiere_derivacion, sql.scoff.tests)} sugieren consultar`));
-    k.push(kpi("Derivaciones", num(sql.derivaciones.total), "solicitudes de apoyo"));
-  }
-  if (sql?.pasos) k.push(kpi("Pasos diarios promedio", num(sql.pasos.promedio_diario), `${num(sql.pasos.dias_registrados)} días registrados`));
-  if (sql?.pulso) k.push(kpi("Pulso promedio", sql.pulso.promedio ? `${num(sql.pulso.promedio)} lpm` : "—", `${num(sql.pulso.mediciones)} mediciones`));
-  if (sql?.orientacion) k.push(kpi("Orientación entre pares", num(sql.orientacion.conversaciones), `${num(sql.orientacion.sin_tutor)} esperan tutor · ${num(sql.orientacion.derivadas)} derivadas`));
-  if (sql?.derivaciones_contacto) k.push(kpi("Derivaciones con contacto", num(sql.derivaciones_contacto.con_contacto), `${num(sql.derivaciones_contacto.pendientes)} pendientes de gestión`));
-  if (ev) k.push(kpi("Eventos de uso", num(ev.total), `${num(ev.instalaciones)} instalaciones activas`));
-  if (sql) k.push(kpi("Borrados y revocaciones", num(sql.privacidad.eliminaciones + sql.privacidad.revocaciones), `en ${d} días`));
-  $("#kpis").innerHTML = k.join("") || '<p class="vacio">Sin datos.</p>';
+  // Seguimiento y moderación: 6 celdas iguales en una fila.
+  const seg = sql?.seguridad;
+  $("#seguimiento").innerHTML = sql ? [
+    celda("Derivaciones", num(sql.derivaciones.total), "solicitudes de apoyo"),
+    celda("Tests SCOFF", num(sql.scoff.tests), `${pct(sql.scoff.sugiere_derivacion, sql.scoff.tests)} sugiere consultar`),
+    celda("Con contacto", num(sql.derivaciones_contacto?.con_contacto ?? 0), `${num(sql.derivaciones_contacto?.pendientes ?? 0)} pendientes de gestión`),
+    celda("IPs bloqueadas", seg ? num(seg.ips_bloqueadas.length) : "—", seg ? "bloqueos vigentes" : "solo administradores"),
+    celda("Rechazos 24 h", seg ? num(seg.rechazos_24h) : "—", seg ? "por límites o validación" : "solo administradores"),
+    celda("Borrados", num(sql.privacidad.eliminaciones + sql.privacidad.revocaciones), `en ${d} días`),
+  ].join("") : '<p class="vacio">Sin datos.</p>';
+
+  // Resumen de salud (panel lateral de Actividad).
+  $("#resumen-salud").innerHTML = sql ? [
+    miniKpi("IMC promedio", sql.imc.promedio != null ? String(sql.imc.promedio).replace(".", ",") : "—"),
+    miniKpi("Pulso promedio", sql.pulso?.promedio ? `${num(sql.pulso.promedio)} lpm` : "—"),
+    miniKpi("Pasos diarios", sql.pasos ? num(sql.pasos.promedio_diario) : "—"),
+    miniKpi("Agua diaria", sql.agua.promedio_diario_ml ? `${litros(sql.agua.promedio_diario_ml)} L` : "—"),
+  ].join("") : "";
+
+  // Uso del sistema.
+  const uso = [];
+  if (sql) uso.push(celda("Usuarios que comparten", num(sql.usuarios.total), `+${num(sql.usuarios.nuevos)} en ${d} días · ${num(sql.usuarios.activos)} activos`, 4));
+  if (sql?.orientacion) uso.push(celda("Orientación entre pares", num(sql.orientacion.conversaciones), `${num(sql.orientacion.sin_tutor)} esperan tutor · ${num(sql.orientacion.derivadas)} derivadas`, 4));
+  if (ev) uso.push(celda("Eventos de uso", num(ev.total), `${num(ev.instalaciones)} instalaciones activas`, 4));
+  $("#uso-sistema").innerHTML = uso.join("") || '<p class="vacio">Sin datos.</p>';
 
   // SQL
   if (sql) {
     const etq = sql.serie.map((s) => fechaCorta(s.dia));
-    lineas("g-serie-agua", etq, [{ nombre: "Agua", valores: sql.serie.map((s) => s.registros_agua) }]);
-    lineas("g-serie", etq, [
-      { nombre: "IMC", valores: sql.serie.map((s) => s.registros_imc) },
+    lineas("g-serie-agua", etq, [{ nombre: "Vasos de agua", valores: sql.serie.map((s) => s.registros_agua) }]);
+    // Separados: SCOFF y derivaciones (pocas por día) e IMC (más registros) no comparten bien un eje.
+    lineas("g-serie-scoff", etq, [
       { nombre: "Tests SCOFF", valores: sql.serie.map((s) => s.tests_scoff) },
       { nombre: "Derivaciones", valores: sql.serie.map((s) => s.derivaciones) },
     ]);
+    lineas("g-serie-imc", etq, [{ nombre: "Registros de IMC", valores: sql.serie.map((s) => s.registros_imc) }]);
     tabla("t-serie", [{ t: "Día" }, { t: "Nuevos usuarios", num: 1 }, { t: "Agua", num: 1 }, { t: "IMC", num: 1 }, { t: "SCOFF", num: 1 }, { t: "Derivaciones", num: 1 }],
       sql.serie.map((s) => [fechaCorta(s.dia), s.nuevos_usuarios, s.registros_agua, s.registros_imc, s.tests_scoff, s.derivaciones]));
 
@@ -378,7 +396,7 @@ function render() {
     barras("g-imc", cats.map((c) => etiqueta("imc", c)), cats.map((c) => sql.imc.categorias[c] || 0), { nombre: "Usuarios" });
     tabla("t-imc", [{ t: "Rango" }, { t: "Usuarios", num: 1 }, { t: "%", num: 0 }],
       cats.map((c) => [etiqueta("imc", c), sql.imc.categorias[c] || 0, pct(sql.imc.categorias[c] || 0, sql.imc.usuarios)]));
-    $("#p-imc").textContent = `Último IMC de cada usuario · referencia OMS, no es diagnóstico`;
+    $("#p-imc").textContent = "IMC por rango (último de cada usuario · referencia OMS)";
 
     const puntajes = [0, 1, 2, 3, 4, 5];
     barras("g-scoff", puntajes.map(String), puntajes.map((p) => sql.scoff.puntajes[p] || 0), { nombre: "Tests" });
@@ -412,7 +430,7 @@ function render() {
     ]);
   } else {
     ["t-serie", "t-imc", "t-scoff", "t-edad", "t-deriv", "t-privacidad"].forEach((id) => tabla(id, [], []));
-    ["g-serie", "g-serie-agua", "g-imc", "g-scoff", "g-edad", "g-deriv"].forEach((id) => { estado.graficos[id]?.destroy(); });
+    ["g-serie-scoff", "g-serie-imc", "g-serie-agua", "g-imc", "g-scoff", "g-edad", "g-deriv"].forEach((id) => { estado.graficos[id]?.destroy(); });
   }
 
   // NoSQL
@@ -437,7 +455,11 @@ function render() {
   }
 
   tabla("t-inventario", [{ t: "Dato" }, { t: "Teléfono" }, { t: "SQL (Supabase)" }, { t: "NoSQL (Firestore)" }, { t: "Retención en la nube" }], [
-    ["Nombre, patologías, alergias, medicamentos", "Sí", "No", "No", "—"],
+    ["Nombre", "Sí", "No", "No", "—"],
+    ["Patologías, alergias, medicamentos", "Sí", "Cifrados para Bienestar, al pedir atención", "No", "Hasta revocar o eliminar"],
+    ["Sede", "Sí", "Solo la sede (se ocultan las de menos de 5 personas)", "No", "24 meses"],
+    ["Cuestionarios (WHO-5, PHQ-2, PHQ-9)", "Respuestas y puntaje", "Solo puntaje", "No", "24 meses"],
+    ["Ánimo diario", "Sí", "No", "No", "—"],
     ["Edad / sexo", "Sí (exacta)", "Rango de edad y sexo", "No", "24 meses"],
     ["Peso y estatura", "Sí", "No", "No", "—"],
     ["IMC y rango de referencia", "Sí", "Sí", "No", "24 meses"],

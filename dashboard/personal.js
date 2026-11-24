@@ -301,8 +301,14 @@ async function panelDerivaciones(raiz, fuente) {
           contacto = [c.nombre, c.contacto, c.mensaje].filter(Boolean).join(" · ");
         } catch { contacto = d.contacto_cifrado.kid && d.contacto_cifrado.kid !== clave.huella ? `Cifrado con otra clave (${d.contacto_cifrado.kid})` : "No se pudo descifrar"; }
       }
-      const sel = el("select", {}, ...Object.entries(ESTADOS_DER).map(([k, v]) => el("option", { value: k, selected: k === d.estado }, v)));
-      sel.onchange = async () => { try { await fuente.gestionar(d.id, sel.value); } catch (e) { alert(e.message); sel.value = d.estado; } };
+      // Insignia de estado: verde «En contacto»/«Atendida», ámbar «Pendiente».
+      const claseEstado = (v) => (v === "pendiente" ? "estado-warn" : "estado-ok");
+      const sel = el("select", { className: claseEstado(d.estado), ariaLabel: "Estado de la derivación" },
+        ...Object.entries(ESTADOS_DER).map(([k, v]) => el("option", { value: k, selected: k === d.estado }, v)));
+      sel.onchange = async () => {
+        sel.className = claseEstado(sel.value);
+        try { await fuente.gestionar(d.id, sel.value); d.estado = sel.value; } catch (e) { alert(e.message); sel.value = d.estado; sel.className = claseEstado(d.estado); }
+      };
       const chat = el("button", { type: "button", className: "btn-icono" }, "Responder por chat");
       chat.onclick = async () => {
         try { await fuente.iniciarAtencion(d.id); alert("Chat listo. Ábrelo en la pestaña Atención: la persona lo verá en la app, en Apoyo profesional → Ver mensajes."); }

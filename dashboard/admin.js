@@ -118,17 +118,18 @@ async function panelEquipo(raiz, fuente) {
           try { await fuente.desactivar(p.user_id); await lista(); } catch (e) { alert(e.message); }
         };
       }
-      return [p.nombre_visible, p.email, ROLES[p.rol] || p.rol, p.activo ? "Activo" : "Sin acceso", fecha(p.ultimo_acceso), accion];
+      const estadoP = el("span", { className: `insignia ${p.activo ? "ok" : "off"}` }, p.activo ? "Activo" : "Sin acceso");
+      return [p.nombre_visible, p.email, ROLES[p.rol] || p.rol, estadoP, fecha(p.ultimo_acceso), accion];
     }));
     $("#a-equipo").replaceChildren(t);
     const invs = await fuente.invitaciones();
-    $("#a-invitaciones").replaceChildren(tablaDe(["Nombre", "Correo", "Rol", "Registrado", ""], invs.map((i) => {
+    $("#a-invitaciones").replaceChildren(tablaDe(["Nombre", "Correo", "Rol", "Estado", ""], invs.map((i) => {
       const quitar = el("button", { type: "button", className: "btn-icono" }, "Cancelar");
       quitar.onclick = async () => {
         if (!confirm(`¿Cancelar el pre-registro de ${i.correo}?`)) return;
         try { await fuente.cancelarInvitacion(i.correo); await lista(); } catch (e) { alert(e.message); }
       };
-      return [i.nombre_visible, i.correo, ROLES[i.rol] || i.rol, fecha(i.creado_en), quitar];
+      return [i.nombre_visible, i.correo, ROLES[i.rol] || i.rol, el("span", { className: "insignia warn" }, `Pendiente · ${fecha(i.creado_en)}`), quitar];
     })));
   }
 

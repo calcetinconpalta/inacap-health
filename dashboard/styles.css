@@ -18,6 +18,8 @@
   --serie-3: #1baf7a;
   --serie-4: #eda100;
   --sombra: 0 1px 2px rgba(0, 0, 0, .04);
+  --accent2: #2e9e5b;
+  --ok-bg: #e3f4ea; --ok-tx: #1e6b3d; --warn-bg: #fdf0d5; --warn-tx: #8a5a00; --off-bg: #ececef; --off-tx: #55555c;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -37,6 +39,8 @@
     --serie-3: #199e70;
     --serie-4: #c98500;
     --sombra: none;
+    --accent2: #a56dff;
+    --ok-bg: #163524; --ok-tx: #7fdca6; --warn-bg: #3a2c10; --warn-tx: #f3c46a; --off-bg: #2c2c29; --off-tx: #c3c2b7;
   }
 }
 :root[data-theme="dark"] {
@@ -56,6 +60,8 @@
   --serie-3: #199e70;
   --serie-4: #c98500;
   --sombra: none;
+  --accent2: #a56dff;
+  --ok-bg: #163524; --ok-tx: #7fdca6; --warn-bg: #3a2c10; --warn-tx: #f3c46a; --off-bg: #2c2c29; --off-tx: #c3c2b7;
 }
 
 * { box-sizing: border-box; }
@@ -195,3 +201,42 @@ details summary { color: var(--texto-2); font-size: 12px; cursor: pointer; }
 .a-form label { display: grid; gap: 6px; font-size: 13px; font-weight: 500; color: var(--texto-2); }
 .a-form input, .a-form select { font: inherit; padding: 8px 10px; border: 1px solid var(--borde); border-radius: 10px; background: var(--fondo); color: var(--texto); min-width: 0; }
 .a-form .btn-primario { padding: 9px 14px; }
+
+/* ---------- Estadísticas en bento grid (CLAUDE-dashboard.md, Opción A) ----------
+   Cada sección tiene su sub-grid de 12 columnas. El tamaño lo decide el tipo de contenido:
+   3 densidades de celda: 1 fila (KPI), 2 filas (gráficos y resumen), 2 filas a lo ancho (actividad). */
+.sec-bento { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; letter-spacing: .02em;
+  text-transform: uppercase; color: var(--texto-2); margin: 22px 0 6px; }
+.sec-bento::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent2); flex: none; }
+.sec-bento:first-child { margin-top: 4px; }
+.bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-rows: 96px; gap: 10px; }
+.celda { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 14px; padding: 10px 14px; box-shadow: var(--sombra);
+  display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+.celda h3 { margin: 0; font-size: 12px; font-weight: 600; color: var(--texto-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.celda .c-valor { font-size: 26px; font-weight: 700; letter-spacing: -.02em; margin-top: auto; font-variant-numeric: tabular-nums; }
+.celda .c-detalle { font-size: 12px; color: var(--texto-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.celda .grafico { position: relative; flex: 1; min-height: 0; height: auto; margin-top: 6px; }
+.celda .tabla { margin-top: 6px; overflow: auto; }
+.seguimiento .celda { box-shadow: inset 2px 0 0 var(--accent2); }   /* sin var(--sombra): en noche vale «none» y anularía la regla */
+.c2 { grid-column: span 2; } .c4 { grid-column: span 4; } .c5 { grid-column: span 5; } .c6 { grid-column: span 6; }
+.c7 { grid-column: span 7; } .c8 { grid-column: span 8; } .c12 { grid-column: span 12; } .r2 { grid-row: span 2; }
+.mini-kpis { display: grid; grid-template-rows: repeat(4, 1fr); gap: 6px; flex: 1; margin-top: 6px; }
+.mini-kpis div { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: var(--superficie); border-radius: 8px; padding: 0 10px; font-size: 13px; }
+.mini-kpis b { font-size: 16px; font-variant-numeric: tabular-nums; }
+.tablas-detalle { margin-top: 10px; }
+.tablas-detalle .grilla { margin-top: 10px; }
+@media (max-width: 900px) {
+  .bento { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .c4, .c5, .c6, .c7, .c8, .c12 { grid-column: span 6; }
+}
+@media (max-width: 520px) {
+  .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .c2 { grid-column: span 1; } .c4, .c5, .c6, .c7, .c8, .c12 { grid-column: span 2; }
+}
+
+/* Insignias de estado en las tablas (Equipo, Derivaciones): fondo sutil, nunca rojo. */
+.insignia { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.insignia.ok, select.estado-ok { background: var(--ok-bg); color: var(--ok-tx); }
+.insignia.warn, select.estado-warn { background: var(--warn-bg); color: var(--warn-tx); }
+.insignia.off, select.estado-off { background: var(--off-bg); color: var(--off-tx); }
+select.estado-ok, select.estado-warn, select.estado-off { border: 0; border-radius: 999px; padding: 3px 8px; font-weight: 600; }
