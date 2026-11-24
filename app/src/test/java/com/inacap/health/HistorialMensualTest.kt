@@ -62,4 +62,20 @@ class HistorialMensualTest {
         assertFalse("La racha debe llegar a hoy", animo.sugerirApoyo(listOf(a(20, 1), a(21, 1), a(22, 1)), hoy))
         assertEquals(5, animo.NIVELES.size)
     }
+
+    @Test fun laMallaDelHeroPasaDeUnDatoAOtroSinSaltos() {
+        val H = com.inacap.health.ui.screens.inicio.DatoHero.entries
+        val agua = com.inacap.health.ui.screens.inicio.mallaEn(0f)
+        val pasos = com.inacap.health.ui.screens.inicio.mallaEn(1f)
+        assertEquals(H[0].malla, agua); assertEquals(H[1].malla, pasos)
+        val mitad = com.inacap.health.ui.screens.inicio.mallaEn(0.5f)[0].color
+        assertTrue("A mitad de camino es una mezcla, no uno de los dos", mitad != agua[0].color && mitad != pasos[0].color)
+        // Pasos pequeños del deslizamiento → cambios pequeños de color (sin «cambio de foto»).
+        var anterior = agua[0].color
+        for (i in 1..20) {
+            val c = com.inacap.health.ui.screens.inicio.mallaEn(i / 20f)[0].color
+            assertTrue(kotlin.math.abs(c.red - anterior.red) < 0.1f && kotlin.math.abs(c.green - anterior.green) < 0.1f && kotlin.math.abs(c.blue - anterior.blue) < 0.1f)
+            anterior = c
+        }
+    }
 }

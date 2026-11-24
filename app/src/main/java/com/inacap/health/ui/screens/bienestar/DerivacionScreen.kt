@@ -42,7 +42,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.inacap.health.data.remote.NubeConfig
 import com.inacap.health.ui.theme.BorderGray
-import androidx.compose.material3.OutlinedTextField
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -65,13 +64,6 @@ fun DerivacionScreen(
     var canalSeleccionado by rememberSaveable { mutableStateOf<String?>(null) }
     var autorizado by rememberSaveable { mutableStateOf(false) }
     var solicitudConfirmada by rememberSaveable { mutableStateOf(false) }
-    var quiereContacto by rememberSaveable { mutableStateOf(false) }
-    var nombreContacto by rememberSaveable { mutableStateOf("") }
-    var medioContacto by rememberSaveable { mutableStateOf("") }
-    var mensajeContacto by rememberSaveable { mutableStateOf("") }
-    var conContacto by rememberSaveable { mutableStateOf(false) }
-    val contactoDisponible = NubeConfig.actual.derivacionCifradaDisponible
-    val contactoValido = !quiereContacto || (nombreContacto.isNotBlank() && medioContacto.trim().length >= 6)
 
     val codigoAtencion = rememberSaveable {
         "INH-" + (1..6).map { "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".random() }.joinToString("")
@@ -189,53 +181,8 @@ fun DerivacionScreen(
                     )
                 }
 
-                // Contacto directo (opcional), cifrado de extremo a extremo
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, BorderGray)
-                ) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().clickable(enabled = contactoDisponible) { quiereContacto = !quiereContacto },
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(
-                                checked = quiereContacto && contactoDisponible,
-                                onCheckedChange = { quiereContacto = it },
-                                enabled = contactoDisponible,
-                                colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
-                            )
-                            Text(
-                                "Quiero que Bienestar Estudiantil me contacte (opcional)",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.padding(start = 8.dp)
-                            )
-                        }
-                        Text(
-                            if (contactoDisponible) "Tus datos de contacto se cifran en tu teléfono: solo el equipo de Bienestar Estudiantil puede leerlos. Ni la app ni sus administradores pueden verlos."
-                            else "El contacto directo no está configurado en esta versión de prueba.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        if (quiereContacto && contactoDisponible) {
-                            OutlinedTextField(
-                                value = nombreContacto, onValueChange = { nombreContacto = it.take(60) },
-                                label = { Text("¿Cómo te llamamos?") }, singleLine = true, modifier = Modifier.fillMaxWidth()
-                            )
-                            OutlinedTextField(
-                                value = medioContacto, onValueChange = { medioContacto = it.take(80) },
-                                label = { Text("Correo o teléfono") }, singleLine = true, modifier = Modifier.fillMaxWidth()
-                            )
-                            OutlinedTextField(
-                                value = mensajeContacto, onValueChange = { mensajeContacto = it.take(500) },
-                                label = { Text("Mensaje breve (opcional)") }, minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-                }
+                // El contacto directo de Bienestar Estudiantil se quitó (1.3.4): aún no está implementado
+                // del lado de Bienestar. La solicitud va solo con el código.
 
                 Spacer(modifier = Modifier.weight(1f, fill = false))
 
@@ -243,16 +190,9 @@ fun DerivacionScreen(
                 Button(
                     onClick = {
                         solicitudConfirmada = true
-                        conContacto = quiereContacto && contactoDisponible
-                        val contacto = if (conContacto) JSONObject()
-                            .put("nombre", com.inacap.health.util.Saneamiento.linea(nombreContacto, 60))
-                            .put("contacto", com.inacap.health.util.Saneamiento.linea(medioContacto, 80))
-                            .put("mensaje", com.inacap.health.util.Saneamiento.texto(mensajeContacto, 500))
-                            .put("codigo", codigoAtencion)
-                            else null
-                        canalSeleccionado?.let { onSolicitudConfirmada(it, codigoAtencion, contacto) }
+                        canalSeleccionado?.let { onSolicitudConfirmada(it, codigoAtencion, null) }
                     },
-                    enabled = canalSeleccionado != null && autorizado && contactoValido,
+                    enabled = canalSeleccionado != null && autorizado,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)
@@ -300,8 +240,7 @@ fun DerivacionScreen(
                         }
 
                         Text(
-                            text = if (conContacto) "Tu solicitud se envía cifrada de extremo a extremo apenas haya internet. Bienestar Estudiantil te contactará al medio que indicaste; menciona tu código si te lo piden."
-                            else "No dejaste datos de contacto, así que nadie te contactará: puedes acercarte a Bienestar Estudiantil con tu código. Si activaste \"Compartir datos anonimizados\", solo se registra el canal (sin tu nombre) para estadísticas.",
+                            text = "Acércate a Bienestar Estudiantil con tu código para que te atiendan. Si activaste \"Compartir datos anonimizados\", solo se registra el canal (sin tu nombre) para estadísticas.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

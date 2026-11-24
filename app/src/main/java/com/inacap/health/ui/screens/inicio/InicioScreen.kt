@@ -110,7 +110,10 @@ fun InicioScreen(
             }
             Text(hoy, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.labelLarge)
             Text(saludo, color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(12.dp))
+        }
+
+        // Hero fuera de la banda: así la banda mide lo mismo en Inicio, Salud, Bienestar y Perfil.
+        Box(Modifier.padding(horizontal = 16.dp)) {
             HeroInicio(pager, banda) { dato ->
                 when (dato) {
                     DatoHero.AGUA -> ContenidoHero(

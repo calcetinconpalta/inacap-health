@@ -16,6 +16,9 @@
     - Recordatorios activos, Modo noche con interruptor y Cuenta con el correo abreviado.
     - Bloqueo, Seguridad, Privacidad y Términos.
     - «Eliminar mis datos» sigue dentro de Privacidad.
+- **Hero de Inicio fuera de la banda roja:** la banda mide parecido en las cuatro pestañas, así que el cambio de tamaño al pasar de Inicio a Salud, Bienestar o Perfil ya no es brusco.
+- **Los colores del hero se mezclan al deslizar** (agua → pasos → pulso → IMC): hay una sola malla de fondo cuyos colores pasan de uno a otro como un degradado, en vez de cambiar de golpe como una foto.
+- **Se quitó el contacto directo de Bienestar Estudiantil** («Quiero que Bienestar Estudiantil me contacte»), porque aún no está implementado. La solicitud de apoyo va solo con el código.
 - Pruebas: 128, más una prueba que recorre las pestañas y guarda capturas en claro y noche en `app/build/capturas/`.
 
 ---

@@ -66,56 +66,84 @@ fun sinAnimaciones(): Boolean {
 }
 
 /**
- * Hero de Inicio dentro de la banda roja: tarjeta propia con gradient mesh y tres capas con
- * parallax (malla y círculos de fondo, ola translúcida propia de cada dato, y el dato al frente).
+ * Mezcla dos mallas: [f] = 0 → [a], 1 → [b]. Así el fondo pasa de un dato a otro como un
+ * degradado continuo (antes cada página tenía su malla fija y se veía como un cambio de foto).
+ */
+fun mezclarMallas(a: List<Diseno.Mancha>, b: List<Diseno.Mancha>, f: Float): List<Diseno.Mancha> =
+    a.zip(b) { x, y ->
+        Diseno.Mancha(
+            color = androidx.compose.ui.graphics.lerp(x.color, y.color, f),
+            x = x.x + (y.x - x.x) * f, y = x.y + (y.y - x.y) * f, radio = x.radio + (y.radio - x.radio) * f
+        )
+    }
+
+/** Malla del hero para una posición del deslizamiento (0 = Agua, 1 = Pasos, 1,5 = mitad entre Pasos y Pulso…). */
+fun mallaEn(posicion: Float): List<Diseno.Mancha> {
+    val ultimo = DatoHero.entries.size - 1
+    val p = posicion.coerceIn(0f, ultimo.toFloat())
+    val i = kotlin.math.floor(p).toInt().coerceAtMost(ultimo)
+    val j = (i + 1).coerceAtMost(ultimo)
+    return mezclarMallas(DatoHero.entries[i].malla, DatoHero.entries[j].malla, p - i)
+}
+
+/**
+ * Hero de Inicio (bajo la banda roja): tarjeta propia con gradient mesh y tres capas con parallax.
+ * - Fondo (el más lento): UNA malla que mezcla sus colores según el deslizamiento + círculos translúcidos.
+ * - Ola blanca translúcida propia de cada dato (velocidad media).
+ * - El dato grande al frente (el más rápido).
  */
 @Composable
 fun HeroInicio(pager: PagerState, banda: Color, contenido: (DatoHero) -> ContenidoHero) {
     val quieto = sinAnimaciones()
-    HorizontalPager(
-        state = pager,
-        modifier = Modifier.fillMaxWidth().height(Diseno.ALTO_HERO)
-            .shadow(Diseno.SOMBRA_HERO, RoundedCornerShape(Diseno.ESQUINA_HERO), clip = false)
-            .clip(RoundedCornerShape(Diseno.ESQUINA_HERO))
-            // Borde de luz blanco sutil arriba (se despega de la banda).
-            .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.35f), Color.Transparent)), RoundedCornerShape(Diseno.ESQUINA_HERO))
-    ) { pagina ->
-        val dato = DatoHero.entries[pagina]
-        val desplazamiento = (pager.currentPage - pagina) + pager.currentPageOffsetFraction
-        Box(Modifier.fillMaxSize().background(banda)) {
-            // Capa 1 (la más lenta): malla y círculos blancos translúcidos.
-            Canvas(Modifier.fillMaxSize().graphicsLayer { if (!quieto) translationX = desplazamiento * size.width * (1f - Diseno.PARALLAX_FONDO) }) {
-                dato.malla.forEach { m ->
-                    val r = max(size.width, size.height) * m.radio
-                    drawRect(Brush.radialGradient(
-                        listOf(m.color.copy(alpha = Diseno.INTENSIDAD_MALLA), Color.Transparent),
-                        center = Offset(size.width * m.x, size.height * m.y), radius = r
-                    ))
-                }
-                val blanco = Color.White.copy(alpha = Diseno.OPACIDAD_CAPAS)
-                drawCircle(blanco, radius = size.height * 0.55f, center = Offset(size.width * 0.92f, size.height * 0.1f))
-                drawCircle(blanco, radius = size.height * 0.25f, center = Offset(size.width * 0.12f, size.height * 0.95f))
+    val forma = RoundedCornerShape(Diseno.ESQUINA_HERO)
+    Box(
+        Modifier.fillMaxWidth().height(Diseno.ALTO_HERO)
+            .shadow(Diseno.SOMBRA_HERO, forma, clip = false)
+            .clip(forma)
+            .background(banda)
+            // Borde de luz blanco sutil arriba.
+            .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.35f), Color.Transparent)), forma)
+    ) {
+        // Capa 1: malla continua (se lee la posición dentro del dibujo, sin recomponer en cada cuadro).
+        Canvas(Modifier.fillMaxSize()) {
+            val posicion = pager.currentPage + pager.currentPageOffsetFraction
+            mallaEn(posicion).forEach { m ->
+                val r = max(size.width, size.height) * m.radio
+                drawRect(Brush.radialGradient(
+                    listOf(m.color.copy(alpha = Diseno.INTENSIDAD_MALLA), Color.Transparent),
+                    center = Offset(size.width * m.x, size.height * m.y), radius = r
+                ))
             }
-            // Capa 2: ola blanca translúcida propia de cada dato.
-            Canvas(Modifier.fillMaxSize().graphicsLayer { if (!quieto) translationX = desplazamiento * size.width * (1f - Diseno.PARALLAX_OLA) }) {
-                val alto = size.height * (0.62f + 0.06f * pagina)
-                val ola = Path().apply {
-                    moveTo(0f, alto)
-                    cubicTo(size.width * 0.3f, alto - 40f - 10f * pagina, size.width * 0.6f, alto + 30f, size.width, alto - 20f)
-                    lineTo(size.width, size.height); lineTo(0f, size.height); close()
+            val corrimiento = if (quieto) 0f else -posicion * size.width * (1f - Diseno.PARALLAX_FONDO) * 0.25f
+            val blanco = Color.White.copy(alpha = Diseno.OPACIDAD_CAPAS)
+            drawCircle(blanco, radius = size.height * 0.55f, center = Offset(size.width * 0.92f + corrimiento, size.height * 0.1f))
+            drawCircle(blanco, radius = size.height * 0.25f, center = Offset(size.width * 0.12f + corrimiento, size.height * 0.95f))
+        }
+        HorizontalPager(state = pager, modifier = Modifier.fillMaxSize()) { pagina ->
+            val dato = DatoHero.entries[pagina]
+            val desplazamiento = (pager.currentPage - pagina) + pager.currentPageOffsetFraction
+            Box(Modifier.fillMaxSize()) {
+                // Capa 2: ola propia de cada dato, más lenta que el frente.
+                Canvas(Modifier.fillMaxSize().graphicsLayer { if (!quieto) translationX = desplazamiento * size.width * (1f - Diseno.PARALLAX_OLA) }) {
+                    val alto = size.height * (0.62f + 0.06f * pagina)
+                    val ola = Path().apply {
+                        moveTo(0f, alto)
+                        cubicTo(size.width * 0.3f, alto - 40f - 10f * pagina, size.width * 0.6f, alto + 30f, size.width, alto - 20f)
+                        lineTo(size.width, size.height); lineTo(0f, size.height); close()
+                    }
+                    drawPath(ola, Color.White.copy(alpha = Diseno.OPACIDAD_CAPAS))
                 }
-                drawPath(ola, Color.White.copy(alpha = Diseno.OPACIDAD_CAPAS))
-            }
-            // Capa 3 (la más rápida): el dato grande en blanco.
-            val c = contenido(dato)
-            Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.Center) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(8.dp).background(dato.punto, CircleShape).border(1.dp, Color.White, CircleShape))
-                    Spacer(Modifier.width(6.dp))
-                    Text(dato.etiqueta, color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.labelLarge)
+                // Capa 3: el dato grande en blanco.
+                val c = contenido(dato)
+                Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.Center) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(8.dp).background(dato.punto, CircleShape).border(1.dp, Color.White, CircleShape))
+                        Spacer(Modifier.width(6.dp))
+                        Text(dato.etiqueta, color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.labelLarge)
+                    }
+                    Text(c.valor, color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
+                    Text(c.detalle, color = Color.White.copy(alpha = 0.92f), style = MaterialTheme.typography.bodyMedium)
                 }
-                Text(c.valor, color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
-                Text(c.detalle, color = Color.White.copy(alpha = 0.92f), style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
