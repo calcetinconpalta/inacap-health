@@ -1,0 +1,323 @@
+<title>Pestañas INACAP Health</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+<style>
+/* Layout: encabezado + cuatro teléfonos (Salud, Bienestar, Perfil claro, Perfil noche) que se apilan en pantallas chicas. */
+:root {
+  --bg: #f2f2f3;
+  --fg: #141416;
+  --muted: #61616a;
+  --ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #0c0c0e; --fg: #f1f1f3; --muted: #a0a0a8; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #0c0c0e; --fg: #f1f1f3; --muted: #a0a0a8; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--ui); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+.envoltura { max-width: 1440px; margin: 0 auto; display: grid; gap: 26px; }
+header h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.02em; text-wrap: balance; }
+header p { margin: 6px 0 0; color: var(--muted); max-width: 76ch; }
+.fila { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; align-items: start; }
+.opcion { display: grid; gap: 10px; min-width: 0; justify-items: center; }
+.opcion h2 { margin: 0; font-size: 13px; font-weight: 700; color: var(--muted); letter-spacing: .05em; text-transform: uppercase; }
+.opcion > p { margin: 0; font-size: 13.5px; color: var(--muted); max-width: 330px; text-align: center; }
+footer { color: var(--muted); font-size: 14px; max-width: 80ch; display: grid; gap: 8px; }
+footer b { color: var(--fg); }
+
+/* ---------- App (cada maqueta fija su tema) ---------- */
+.tel { width: 100%; max-width: 330px; border-radius: 38px; padding: 9px; background: #000; }
+.app {
+  --s: #ffffff; --s2: #f4f4f6; --luz: #ffffff; --sombra: #dcdce2; --fg: #141418; --sub: #5f5f68; --linea: #ececf0;
+  --rojo: #d6001c; --rojo-osc: #a80016; --rojo-suave: #fde8eb;
+  --agua: #1769e0; --pasos: #e65c00; --pulso: #c62828; --imc: #00796b; --test: #5e35b1; --ok: #1b8a4b;
+  position: relative; border-radius: 30px; overflow: hidden; height: 720px;
+  background: var(--s2); color: var(--fg); font-family: var(--ui); display: flex; flex-direction: column;
+}
+.app.noche {
+  --s: #1c1c20; --s2: #121215; --luz: #26262b; --sombra: #08080a; --fg: #f1f1f4; --sub: #a3a3ad; --linea: #2a2a30;
+  --rojo: #c8001a; --rojo-osc: #7d0010; --rojo-suave: #3a1015;
+  --agua: #4a90ff; --pasos: #ff8a2b; --pulso: #ff5a5a; --imc: #2ec4ae; --test: #a07cff; --ok: #3ccf7f;
+}
+.num { font-variant-numeric: tabular-nums; }
+.card { background: var(--s); border-radius: 16px; box-shadow: 4px 4px 12px var(--sombra), -4px -4px 12px var(--luz); }
+
+/* Banda roja */
+.banda { background: var(--rojo); color: #fff; padding: 12px 18px 18px; border-radius: 0 0 26px 26px; }
+.estado { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; opacity: .95; }
+.banda h3 { margin: 10px 0 0; font-size: 28px; font-weight: 900; letter-spacing: -.03em; line-height: 1.1; }
+.banda p { margin: 2px 0 0; font-size: 13px; opacity: .9; }
+
+.scroll { flex: 1; overflow: hidden; padding: 14px 16px 84px; display: grid; gap: 12px; align-content: start; }
+.tit { font-size: 16px; font-weight: 900; letter-spacing: -.02em; margin: 2px 2px -2px; display: flex; justify-content: space-between; align-items: baseline; }
+.tit small { font-size: 12px; font-weight: 700; color: var(--rojo); }
+.punto { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+.chev { color: var(--sub); font-size: 18px; font-style: normal; }
+
+/* Botón principal */
+.btn { display: inline-block; font-weight: 800; font-size: 13.5px; color: #fff; background: var(--rojo); padding: 9px 14px; border-radius: 12px; box-shadow: 0 3px 0 var(--rojo-osc); }
+.btn.claro { background: #fff; color: var(--rojo); box-shadow: 0 3px 0 rgba(0,0,0,.18); }
+
+/* ---- Salud ---- */
+.hoy { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+.hoy div { background: rgba(255,255,255,.16); border-radius: 12px; padding: 8px 10px; display: grid; gap: 1px; }
+.hoy small { font-size: 10.5px; font-weight: 700; opacity: .9; text-transform: uppercase; letter-spacing: .05em; }
+.hoy b { font-size: 17px; font-weight: 900; }
+.estrella { padding: 14px; display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+.estrella em { font-style: normal; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--pulso); }
+.estrella b { display: block; font-size: 17px; font-weight: 900; letter-spacing: -.01em; margin-top: 2px; }
+.estrella span { display: block; font-size: 12.5px; color: var(--sub); margin: 2px 0 8px; }
+.latido { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: var(--rojo-suave); }
+.latido svg { width: 34px; height: 34px; fill: var(--pulso); }
+.hist { padding: 12px 14px; display: grid; gap: 8px; }
+.hist .cab { display: flex; justify-content: space-between; align-items: baseline; }
+.hist .cab b { font-size: 15px; font-weight: 800; }
+.hist .cab span { font-size: 12px; color: var(--sub); font-weight: 600; }
+.barras { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; align-items: end; height: 46px; }
+.barras i { display: block; border-radius: 4px 4px 1px 1px; background: var(--agua); }
+.barras i.bajo { background: var(--linea); }
+.par { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mini { padding: 12px; display: grid; gap: 4px; }
+.mini .ic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: #fff; font-weight: 900; margin-bottom: 4px; }
+.mini b { font-size: 14px; font-weight: 800; }
+.mini span { font-size: 12px; color: var(--sub); line-height: 1.35; }
+.fila-card { padding: 12px 14px; display: grid; grid-template-columns: 36px 1fr auto; gap: 12px; align-items: center; }
+.fila-card .ic { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: #fff; font-weight: 900; font-size: 14px; }
+.fila-card b { display: block; font-size: 14px; font-weight: 800; }
+.fila-card span { display: block; font-size: 12px; color: var(--sub); }
+
+/* ---- Bienestar ---- */
+.apoyo { padding: 14px; display: grid; gap: 6px; background: var(--rojo); color: #fff; box-shadow: 0 10px 22px rgba(120,0,16,.28); }
+.apoyo em { font-style: normal; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; opacity: .9; }
+.apoyo b { font-size: 18px; font-weight: 900; letter-spacing: -.01em; line-height: 1.25; }
+.apoyo span { font-size: 12.5px; opacity: .92; }
+.apoyo .btn { justify-self: start; margin-top: 6px; }
+.chat { padding: 12px 14px; display: grid; gap: 6px; }
+.chat .cab { display: flex; justify-content: space-between; align-items: center; }
+.chat .cab b { font-size: 14.5px; font-weight: 800; }
+.badge { font-size: 11px; font-weight: 800; color: #fff; background: var(--rojo); border-radius: 999px; padding: 1px 8px; }
+.burbuja { background: var(--s2); border-radius: 4px 14px 14px 14px; padding: 8px 10px; font-size: 12.5px; color: var(--fg); }
+.chat small { font-size: 11.5px; color: var(--sub); }
+.cuest { padding: 12px 14px; display: grid; gap: 8px; }
+.cuest .cab { display: flex; justify-content: space-between; align-items: baseline; }
+.cuest .cab b { font-size: 14.5px; font-weight: 800; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: 999px; background: var(--s2); color: var(--fg); }
+.chip.hecho { color: var(--ok); }
+.chip.hecho::before { content: "✓ "; }
+.carrusel { display: flex; gap: 10px; overflow: hidden; }
+.art { flex: 0 0 132px; border-radius: 14px; overflow: hidden; }
+.art .img { height: 64px; display: grid; place-items: center; color: #fff; font-size: 26px; }
+.art div:last-child { padding: 8px 10px 10px; display: grid; gap: 2px; }
+.art b { font-size: 12.5px; font-weight: 800; line-height: 1.3; }
+.art span { font-size: 11px; color: var(--sub); }
+
+/* ---- Perfil: bento grid ---- */
+.perfil-cab { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.avatar { width: 54px; height: 54px; border-radius: 50%; background: #fff; color: var(--rojo); display: grid; place-items: center; font-weight: 900; font-size: 22px; flex: 0 0 auto; }
+.perfil-cab b { display: block; font-size: 21px; font-weight: 900; letter-spacing: -.02em; }
+.perfil-cab .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.perfil-cab .tags span { font-size: 11px; font-weight: 700; background: rgba(255,255,255,.18); border-radius: 999px; padding: 2px 9px; }
+.bento { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 86px; gap: 10px; }
+.b { padding: 11px 12px; display: grid; grid-template-rows: auto 1fr auto; min-width: 0; overflow: hidden; }
+.b .top { display: flex; justify-content: space-between; align-items: flex-start; }
+.b .ic { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; color: #fff; font-size: 14px; font-weight: 900; }
+.b b { display: block; font-size: 14px; font-weight: 800; line-height: 1.2; }
+.b span { display: block; font-size: 12px; color: var(--sub); line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.b .pie { align-self: end; min-width: 0; }
+.b .ok { color: var(--ok); font-weight: 700; }
+.b-datos { grid-row: span 2; grid-template-rows: auto 1fr auto; }
+.b-datos .centro { display: grid; place-items: center; }
+.b-datos .anillo { width: 66px; height: 66px; border-radius: 50%; display: grid; place-items: center;
+  background: conic-gradient(var(--rojo) 0 288deg, var(--linea) 288deg 360deg); }
+.b-datos .anillo div { width: 52px; height: 52px; border-radius: 50%; background: var(--s); display: grid; place-items: center; font-size: 14px; font-weight: 900; }
+.b-datos .falta { color: var(--rojo); font-weight: 700; white-space: normal; }
+.b-ancha { grid-column: span 2; grid-template-columns: 30px 1fr auto; grid-template-rows: none; align-items: center; gap: 12px; }
+.interruptor { width: 36px; height: 21px; border-radius: 11px; background: var(--rojo); position: relative; }
+.interruptor::after { content: ""; position: absolute; top: 2.5px; right: 2.5px; width: 16px; height: 16px; border-radius: 50%; background: #fff; }
+.app { --neutro: #3b3b46; } .app.noche { --neutro: #55555f; }
+.oculto { font-family: ui-monospace, Menlo, monospace; letter-spacing: .1em; }
+
+.tabs { position: absolute; left: 12px; right: 12px; bottom: 12px; border-radius: 18px; background: var(--s);
+  box-shadow: 4px 4px 14px var(--sombra), -4px -4px 14px var(--luz); display: grid; grid-template-columns: repeat(4, 1fr); padding: 8px 6px; }
+.tabs span { display: grid; justify-items: center; gap: 2px; font-size: 10px; font-weight: 700; color: var(--sub); padding: 4px 0; border-radius: 12px; }
+.tabs svg { width: 21px; height: 21px; fill: currentColor; }
+.tabs .on { color: #fff; background: var(--rojo); }
+
+@media (max-width: 640px) { .tel { max-width: 100%; } }
+</style>
+
+<div class="envoltura">
+  <header>
+    <h1>Salud, Bienestar y Perfil con el diseño de Inicio</h1>
+    <p>Mismo lenguaje que Inicio: banda roja INACAP arriba, tarjetas blancas con relieve suave y el color de cada dato como acento. En vez de una lista de opciones iguales, cada pestaña destaca lo más importante. Perfil usa un bento grid: tarjetas de distintos tamaños según cuánto importan.</p>
+  </header>
+
+  <div class="fila">
+    <!-- ===== SALUD ===== -->
+    <section class="opcion">
+      <h2>Salud</h2>
+      <div class="tel"><div class="app">
+        <div class="banda">
+          <div class="estado"><span>9:41</span><span>●●● 100%</span></div>
+          <h3>Salud</h3>
+          <p>Tus mediciones de hoy</p>
+          <div class="hoy">
+            <div><small>Agua</small><b class="num">3/9</b></div>
+            <div><small>Pasos</small><b class="num">4.210</b></div>
+            <div><small>Pulso</small><b class="num">68</b></div>
+          </div>
+        </div>
+        <div class="scroll">
+          <div class="card estrella">
+            <div><em>Lo más usado</em><b>Medir pulso con la cámara</b><span>Pon el dedo sobre la cámara · 30 s</span><span class="btn">Medir ahora</span></div>
+            <div class="latido"><svg viewBox="0 0 24 24"><path d="M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6-8 11-8 11z"/></svg></div>
+          </div>
+          <div class="card hist">
+            <div class="cab"><b>Historial</b><span>Noviembre · semana 4 ›</span></div>
+            <div class="barras" aria-hidden="true"><i style="height:62%"></i><i style="height:88%"></i><i class="bajo" style="height:40%"></i><i style="height:100%"></i><i style="height:76%"></i><i class="bajo" style="height:30%"></i><i class="bajo" style="height:20%"></i></div>
+          </div>
+          <div class="par">
+            <div class="card mini"><div class="ic" style="background:var(--imc)">%</div><b>Calculadoras</b><span>IMC e hidratación</span></div>
+            <div class="card mini"><div class="ic" style="background:var(--agua)">⌚</div><b>Mi reloj</b><span>Conectado · hace 10 min</span></div>
+          </div>
+          <div class="card fila-card"><div class="ic" style="background:var(--rojo)">↗</div><div><b>Enviar resumen a Bienestar</b><span>PDF de tu historial</span></div><i class="chev">›</i></div>
+        </div>
+        <div class="tabs">
+          <span><svg viewBox="0 0 24 24"><path d="M12 3 3 10v11h6v-6h6v6h6V10z"/></svg>Inicio</span>
+          <span class="on"><svg viewBox="0 0 24 24"><path d="M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6-8 11-8 11z"/></svg>Salud</span>
+          <span><svg viewBox="0 0 24 24"><path d="M4 4h16v12H8l-4 4z"/></svg>Bienestar</span>
+          <span><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6z"/></svg>Perfil</span>
+        </div>
+      </div></div>
+      <p>Arriba, el resumen de hoy dentro de la banda. El pulso con cámara (lo mejor de la app) es la tarjeta estrella. El historial muestra un adelanto de la semana.</p>
+    </section>
+
+    <!-- ===== BIENESTAR ===== -->
+    <section class="opcion">
+      <h2>Bienestar</h2>
+      <div class="tel"><div class="app">
+        <div class="banda">
+          <div class="estado"><span>9:41</span><span>●●● 100%</span></div>
+          <h3>Bienestar</h3>
+          <p>Apoyo confidencial y autocuidado</p>
+        </div>
+        <div class="scroll">
+          <div class="card apoyo">
+            <em>Apoyo de Bienestar</em>
+            <b>¿Necesitas conversar con alguien?</b>
+            <span>Te atiende el equipo de Bienestar. Es confidencial.</span>
+            <span class="btn claro">Pedir atención</span>
+          </div>
+          <div class="card chat">
+            <div class="cab"><b>Tus conversaciones</b><span class="badge">1 nuevo</span></div>
+            <div class="burbuja">Hola Ana, ¿cómo te has sentido con las colaciones esta semana?</div>
+            <small>Orientación · hace 2 h</small>
+          </div>
+          <div class="card cuest">
+            <div class="cab"><b>Cuestionarios</b><span style="font-size:12px;color:var(--sub);font-weight:600">2 de 3 este mes</span></div>
+            <div class="chips"><span class="chip hecho">Bienestar WHO-5</span><span class="chip hecho">Ánimo PHQ-2</span><span class="chip">Alimentación SCOFF</span></div>
+          </div>
+          <div class="tit">Aprende <small>Ver todo</small></div>
+          <div class="carrusel">
+            <div class="card art"><div class="img" style="background:var(--imc)">🥗</div><div><b>Colaciones para el día largo</b><span>3 min</span></div></div>
+            <div class="card art"><div class="img" style="background:var(--agua)">💧</div><div><b>Cuánta agua necesitas</b><span>2 min</span></div></div>
+            <div class="card art"><div class="img" style="background:var(--pasos)">🌙</div><div><b>Dormir mejor en época de pruebas</b><span>4 min</span></div></div>
+          </div>
+        </div>
+        <div class="tabs">
+          <span><svg viewBox="0 0 24 24"><path d="M12 3 3 10v11h6v-6h6v6h6V10z"/></svg>Inicio</span>
+          <span><svg viewBox="0 0 24 24"><path d="M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6-8 11-8 11z"/></svg>Salud</span>
+          <span class="on"><svg viewBox="0 0 24 24"><path d="M4 4h16v12H8l-4 4z"/></svg>Bienestar</span>
+          <span><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6z"/></svg>Perfil</span>
+        </div>
+      </div></div>
+      <p>Pedir atención es lo primero y más visible. Debajo, los chats con el último mensaje, los cuestionarios con su avance y "Aprende" como fila deslizable.</p>
+    </section>
+
+    <!-- ===== PERFIL (claro) ===== -->
+    <section class="opcion">
+      <h2>Perfil · bento grid</h2>
+      <div class="tel"><div class="app">
+        <div class="banda">
+          <div class="estado"><span>9:41</span><span>●●● 100%</span></div>
+          <div class="perfil-cab">
+            <div class="avatar">A</div>
+            <div><b>Ana</b><div class="tags"><span>Sede Valdivia</span><span>Con correo</span></div></div>
+          </div>
+        </div>
+        <div class="scroll">
+          <div class="bento" >
+            <div class="card b b-datos">
+              <div class="top"><div class="ic" style="background:var(--rojo)">A</div></div>
+              <div class="centro"><div class="anillo"><div class="num">80%</div></div></div>
+              <div class="pie"><b>Mis datos</b><span class="falta">Falta: medicamentos</span></div>
+            </div>
+            <div class="card b"><div class="top"><div class="ic" style="background:var(--agua)">⏰</div></div><div></div><div class="pie"><b>Recordatorios</b><span class="ok">2 activos</span></div></div>
+            <div class="card b"><div class="top"><div class="ic" style="background:var(--neutro)">☾</div><div class="interruptor" aria-hidden="true"></div></div><div></div><div class="pie"><b>Modo noche</b><span>Activado</span></div></div>
+            <div class="card b b-ancha"><div class="ic" style="background:var(--rojo)">@</div><div style="min-width:0"><b>Cuenta</b><span>ana…@correo.cl · este teléfono</span></div><i class="chev">›</i></div>
+            <div class="card b"><div class="top"><div class="ic" style="background:var(--neutro)">🔒</div></div><div></div><div class="pie"><b>Bloqueo</b><span class="ok">PIN activo</span></div></div>
+            <div class="card b"><div class="top"><div class="ic" style="background:var(--imc)">✓</div></div><div></div><div class="pie"><b>Seguridad</b><span>Datos cifrados</span></div></div>
+            <div class="card b"><div class="top"><div class="ic" style="background:var(--test)">◐</div></div><div></div><div class="pie"><b>Privacidad</b><span>Compartir: sí</span></div></div>
+            <div class="card b"><div class="top"><div class="ic" style="background:#8a8a94">§</div></div><div></div><div class="pie"><b>Términos</b><span>Versión 3</span></div></div>
+          </div>
+        </div>
+        <div class="tabs">
+          <span><svg viewBox="0 0 24 24"><path d="M12 3 3 10v11h6v-6h6v6h6V10z"/></svg>Inicio</span>
+          <span><svg viewBox="0 0 24 24"><path d="M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6-8 11-8 11z"/></svg>Salud</span>
+          <span><svg viewBox="0 0 24 24"><path d="M4 4h16v12H8l-4 4z"/></svg>Bienestar</span>
+          <span class="on"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6z"/></svg>Perfil</span>
+        </div>
+      </div></div>
+      <p>Cada opción muestra su estado sin tener que entrar: datos completos al 80 %, recordatorios activos, PIN activo, modo noche con su interruptor.</p>
+    </section>
+
+    <!-- ===== PERFIL (noche) ===== -->
+    <section class="opcion">
+      <h2>Perfil · noche</h2>
+      <div class="tel"><div class="app noche">
+        <div class="banda">
+          <div class="estado"><span>9:41</span><span>●●● 100%</span></div>
+          <div class="perfil-cab">
+            <div class="avatar">A</div>
+            <div><b>Ana</b><div class="tags"><span>Sede Valdivia</span><span>Con correo</span></div></div>
+          </div>
+        </div>
+        <div class="scroll">
+          <div class="bento" >
+            <div class="card b b-datos">
+              <div class="top"><div class="ic" style="background:var(--rojo)">A</div></div>
+              <div class="centro"><div class="anillo"><div class="num">80%</div></div></div>
+              <div class="pie"><b>Mis datos</b><span class="falta">Falta: medicamentos</span></div>
+            </div>
+            <div class="card b"><div class="top"><div class="ic" style="background:var(--agua)">⏰</div></div><div></div><div class="pie"><b>Recordatorios</b><span class="ok">2 activos</span></div></div>
+            <div class="card b"><div class="top"><div class="ic" style="background:var(--neutro)">☾</div><div class="interruptor" aria-hidden="true"></div></div><div></div><div class="pie"><b>Modo noche</b><span>Activado</span></div></div>
+            <div class="card b b-ancha"><div class="ic" style="background:var(--rojo)">@</div><div style="min-width:0"><b>Cuenta</b><span>ana…@correo.cl · este teléfono</span></div><i class="chev">›</i></div>
+            <div class="card b"><div class="top"><div class="ic" style="background:var(--neutro)">🔒</div></div><div></div><div class="pie"><b>Bloqueo</b><span class="ok">PIN activo</span></div></div>
+            <div class="card b"><div class="top"><div class="ic" style="background:var(--imc)">✓</div></div><div></div><div class="pie"><b>Seguridad</b><span>Datos cifrados</span></div></div>
+            <div class="card b"><div class="top"><div class="ic" style="background:var(--test)">◐</div></div><div></div><div class="pie"><b>Privacidad</b><span>Compartir: sí</span></div></div>
+            <div class="card b"><div class="top"><div class="ic" style="background:#8a8a94">§</div></div><div></div><div class="pie"><b>Términos</b><span>Versión 3</span></div></div>
+          </div>
+        </div>
+        <div class="tabs">
+          <span><svg viewBox="0 0 24 24"><path d="M12 3 3 10v11h6v-6h6v6h6V10z"/></svg>Inicio</span>
+          <span><svg viewBox="0 0 24 24"><path d="M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6-8 11-8 11z"/></svg>Salud</span>
+          <span><svg viewBox="0 0 24 24"><path d="M4 4h16v12H8l-4 4z"/></svg>Bienestar</span>
+          <span class="on"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6z"/></svg>Perfil</span>
+        </div>
+      </div></div>
+      <p>El mismo bento en modo noche.</p>
+    </section>
+  </div>
+
+  <footer>
+    <span><b>Bento de Perfil, de mayor a menor:</b> dos columnas iguales y filas de la misma altura. Mis datos ocupa dos filas (con cuánto falta completar); a su lado Recordatorios y Modo noche; Cuenta va ancha; luego Bloqueo y Seguridad, y Privacidad y Términos. Todas las tarjetas siguen el mismo orden: ícono arriba, nombre y estado abajo. Eliminar mis datos sigue dentro de Privacidad, no suelto en la grilla, para que no se toque por error.</span>
+    <span><b>Todo con datos de ejemplo.</b> Los nombres de los cuestionarios y los artículos de "Aprende" son ilustrativos.</span>
+  </footer>
+</div>

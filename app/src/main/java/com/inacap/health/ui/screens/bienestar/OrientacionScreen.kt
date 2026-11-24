@@ -302,7 +302,8 @@ private fun Conversacion(vm: OrientacionViewModel, id: String, onDerivacion: () 
     val estado = convs.firstOrNull { it.id == id }?.estado ?: "abierta"
     var texto by remember { mutableStateOf("") }
     val lista = rememberLazyListState()
-    LaunchedEffect(id) { while (true) { vm.cargarMensajes(id); vm.recargar(); delay(5_000) } }
+    val contextoVisto = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(id) { while (true) { vm.cargarMensajes(id); vm.recargar(); com.inacap.health.ui.screens.pestanas.ChatsVistos.marcar(contextoVisto, id); delay(5_000) } }
     LaunchedEffect(mensajes.size) { if (mensajes.isNotEmpty()) lista.animateScrollToItem(mensajes.size - 1) }
 
     Column(Modifier.fillMaxSize()) {

@@ -103,6 +103,32 @@ class NavegacionTest {
         compose.onNodeWithText("Completa tus datos para recomendaciones personalizadas").assertIsDisplayed()
     }
 
+    private fun capturar(nombre: String) {
+        Thread.sleep(300); compose.waitForIdle()
+        var img: android.graphics.Bitmap? = null
+        compose.runOnUiThread {
+            val v = compose.activity.window.decorView
+            img = android.graphics.Bitmap.createBitmap(v.width, v.height, android.graphics.Bitmap.Config.ARGB_8888).also { v.draw(android.graphics.Canvas(it)) }
+        }
+        val dir = java.io.File("build/capturas").apply { mkdirs() }
+        java.io.FileOutputStream(java.io.File(dir, "$nombre.png")).use { img!!.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+    }
+
+    /** Tarea 20: cada pestaña con su pantalla propia, en claro y noche (app/build/capturas/). */
+    @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    fun pestanasRediseniadasYCapturas() {
+        conPerfil(); abrir()
+        for (modo in listOf(com.inacap.health.ui.theme.ModoTema.CLARO, com.inacap.health.ui.theme.ModoTema.OSCURO)) {
+            com.inacap.health.ui.theme.Apariencia.cambiar(app, modo)
+            val sufijo = if (modo == com.inacap.health.ui.theme.ModoTema.CLARO) "claro" else "noche"
+            tab("Salud"); compose.onNodeWithText("Medir pulso con la cámara").assertIsDisplayed(); capturar("salud-$sufijo")
+            tab("Bienestar"); compose.onNodeWithText("¿Necesitas conversar con alguien?").assertIsDisplayed(); capturar("bienestar-$sufijo")
+            tab("Perfil"); compose.onNodeWithText("Mis datos").assertIsDisplayed(); compose.onNodeWithText("Versión ${TextosLegales.VERSION}").assertIsDisplayed(); capturar("perfil-$sufijo")
+            tab("Inicio")
+        }
+        com.inacap.health.ui.theme.Apariencia.cambiar(app, com.inacap.health.ui.theme.ModoTema.SISTEMA)
+    }
+
     /** Captura de Inicio (rediseño 18e) para revisar sin teléfono: app/build/capturas/inicio.png */
     @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
     fun capturaDeInicio() {
@@ -120,7 +146,7 @@ class NavegacionTest {
 
     @Test fun inicioVuelveDesdeOtraPestana() {
         conPerfil(); abrir()
-        tab("Salud"); compose.onNodeWithText("Calculadoras IMC e hidratación").assertIsDisplayed()
+        tab("Salud"); compose.onNodeWithText("Medir pulso con la cámara").assertIsDisplayed()
         tab("Inicio"); enInicio()
         tab("Bienestar"); tab("Perfil"); tab("Inicio"); enInicio()
     }
@@ -140,10 +166,10 @@ class NavegacionTest {
         compose.onNodeWithText("Historial").performClick(); compose.waitForIdle()
         compose.onNodeWithText("Pasos (últimos 7 días)", substring = true).assertDoesNotExist()  // sigue en la pestaña Peso/IMC
         tab("Inicio"); enInicio()                                   // la barra se ve y la casita funciona
-        tab("Salud"); compose.onNodeWithText("Calculadoras IMC e hidratación").assertIsDisplayed() // el menú, no el historial
-        compose.onNodeWithText("Pulso con cámara").performClick(); compose.waitForIdle()
+        tab("Salud"); compose.onNodeWithText("Medir pulso con la cámara").assertIsDisplayed() // el menú, no el historial
+        compose.onNodeWithText("Medir ahora").performClick(); compose.waitForIdle()
         tab("Perfil"); compose.onNodeWithText("Mis datos").assertIsDisplayed()
-        compose.onNodeWithText("Privacidad y mis datos").performClick(); compose.waitForIdle()
+        compose.onNodeWithText("Privacidad").performClick(); compose.waitForIdle()
         tab("Inicio"); enInicio()
     }
 
@@ -164,7 +190,7 @@ class NavegacionTest {
             compose.onNodeWithText("Seguir sin cuenta").performScrollTo().performClick()
         }
         repeat(50) { if (compose.onAllNodes(hasText("Salud") and isSelectable()).fetchSemanticsNodes().isNotEmpty()) return@repeat; Thread.sleep(100); compose.waitForIdle() }
-        tab("Salud"); compose.onNodeWithText("Calculadoras IMC e hidratación").assertIsDisplayed()
+        tab("Salud"); compose.onNodeWithText("Medir pulso con la cámara").assertIsDisplayed()
         tab("Inicio"); compose.onNodeWithText("Hola").assertIsDisplayed()
         tab("Perfil"); tab("Inicio"); compose.onNodeWithText("Hola").assertIsDisplayed()
     }

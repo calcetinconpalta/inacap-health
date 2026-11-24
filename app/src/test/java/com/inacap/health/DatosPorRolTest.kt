@@ -64,4 +64,24 @@ class DatosPorRolTest {
         assertEquals(4, s.rechazos24h); assertEquals("1.2.3.4", s.ips[0].ip); assertNull(s.ips[0].motivo)
         assertEquals("Ana", s.auditoria[0].actor)
     }
+
+    @Test fun estadoDeLasTarjetasDePerfilYBienestar() {
+        val E = com.inacap.health.ui.screens.pestanas.EstadoPestanas
+        val p = com.inacap.health.data.Perfil(nombre = "Ana", edad = 21, sexo = "Femenino", patologias = "Ninguna", alergias = "Ninguna",
+            medicamentos = "", consentimiento = true, sede = "Valdivia")
+        val (avance, faltan) = E.avanceDatos(p)
+        assertEquals(85, avance); assertEquals(listOf("medicamentos"), faltan)
+        assertEquals(0 to 7, E.avanceDatos(null).let { it.first to it.second.size })
+        assertEquals("ana…@correo.cl", E.abreviarCorreo("ana.perez@correo.cl"))
+        assertEquals("al@x.cl", E.abreviarCorreo("al@x.cl"))
+        assertNull(E.abreviarCorreo(null))
+        val m = listOf(
+            com.inacap.health.orientacion.Mensaje("1", "estudiante", "hola", "2026-11-23T10:00:00Z"),
+            com.inacap.health.orientacion.Mensaje("2", "tutor", "¿cómo estás?", "2026-11-23T11:00:00Z"),
+            com.inacap.health.orientacion.Mensaje("3", "tutor", "¿sigues ahí?", "2026-11-23T12:00:00Z")
+        )
+        assertEquals(2, E.noLeidos(m, 0))
+        assertEquals(1, E.noLeidos(m, E.ms("2026-11-23T11:30:00Z")))
+        assertEquals("3", E.ultimoRecibido(m)?.id)
+    }
 }

@@ -1,3 +1,25 @@
+# Cambios · versión 1.3.4
+
+- **Salud, Bienestar y Perfil con el diseño de Inicio** (maqueta `docs/maqueta-pestanas.html`). Banda roja INACAP, tarjetas blancas con relieve suave y botón principal rojo. Las rutas no cambian; `HubScreen` ya no se usa en las pestañas.
+  - **Salud:**
+    - Resumen de hoy en la banda (agua, pasos, pulso).
+    - Tarjeta estrella **«Medir pulso con la cámara»** con «Medir ahora».
+    - Historial con barras de agua de la semana del mes; los días bajo la meta van en gris.
+    - Calculadoras y Mi reloj (con su estado), y «Enviar resumen a Bienestar».
+  - **Bienestar:**
+    - Primero, la tarjeta roja «¿Necesitas conversar con alguien?» con **Pedir atención**.
+    - **Tus conversaciones** con el último mensaje recibido, cuándo llegó y cuántos no leídos (se marcan como leídos al abrir el chat).
+    - **Cuestionarios** con ✓ en los hechos este mes.
+    - **Aprende** como fila que se desliza, y el acceso a Orientación entre pares.
+  - **Perfil en bento grid** (2 columnas iguales, filas de igual altura). Cada tarjeta muestra su estado real:
+    - Mis datos con % completo y «Falta: …».
+    - Recordatorios activos, Modo noche con interruptor y Cuenta con el correo abreviado.
+    - Bloqueo, Seguridad, Privacidad y Términos.
+    - «Eliminar mis datos» sigue dentro de Privacidad.
+- Pruebas: 128, más una prueba que recorre las pestañas y guarda capturas en claro y noche en `app/build/capturas/`.
+
+---
+
 # Cambios · versión 1.3.3
 
 > **Antes de instalar esta versión:** ejecuta `backend/supabase/schema.sql` completo en Supabase (agrega la sede, las invitaciones del equipo, la sesión única, los antecedentes cifrados y los cuestionarios). La app nueva envía la sede, y un servidor sin esa columna rechaza los envíos. Publica también `backend/firebase/firestore.rules` y agrega `confirmado.html` en *Supabase → Authentication → URL Configuration → Redirect URLs*. Completa `BIENESTAR_EMAIL` en `.env` / `local.properties`.

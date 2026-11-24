@@ -264,29 +264,15 @@ private fun AppNavContent(
                     onNavigate = { route -> navController.navigate(route) }
                 )
             }
+            // Tarea 20: cada pestaña con su pantalla propia (mismo lenguaje que Inicio).
             composable(Routes.SALUD) {
-                HubScreen(
-                    titulo = "Salud",
-                    descripcion = "Tus mediciones y registros. Todo queda en tu teléfono.",
-                    items = saludItems,
-                    onNavigate = { route -> navController.navigate(route) }
-                )
+                com.inacap.health.ui.screens.pestanas.SaludPestana(saludViewModel) { route -> navController.navigate(route) }
             }
             composable(Routes.BIENESTAR) {
-                HubScreen(
-                    titulo = "Bienestar",
-                    descripcion = "Herramientas de autocuidado y apoyo confidencial.",
-                    items = bienestarItems,
-                    onNavigate = { route -> navController.navigate(route) }
-                )
+                com.inacap.health.ui.screens.pestanas.BienestarPestana { route -> navController.navigate(route) }
             }
             composable(Routes.PERFIL) {
-                HubScreen(
-                    titulo = "Perfil",
-                    descripcion = "Tus datos, tu cuenta y tus preferencias.",
-                    items = perfilItems,
-                    onNavigate = { route -> navController.navigate(route) }
-                )
+                com.inacap.health.ui.screens.pestanas.PerfilPestana(perfilViewModel) { route -> navController.navigate(route) }
             }
 
             // Subrutas Salud
